@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhysMath Studio | Chytrý LaTeX & Fyzikální Editor</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for instant math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+
+        /* KaTeX adjustments */
+        .katex-display {
+            margin: 0.75em 0 !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.25rem 0;
+        }
+        
+        /* Pulse animation for active tabstop badge */
+        @keyframes subtlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .tabstop-active-bar {
+            animation: subtlePulse 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none sm:select-auto transition-colors duration-200">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="h-14 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 sm:px-5 flex items-center justify-between shrink-0 z-20">
+        <!-- Left: Logo & Mobile Sidebar Toggle -->
+        <div class="flex items-center gap-2.5">
+            <button id="mobileLibraryBtn" onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" title="Zobrazit knihovnu vzorců">
+                <i class="ph ph-books text-xl"></i>
+            </button>
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-indigo-700 flex items-center justify-center text-white font-bold shadow-md shadow-brand-500/20">
+                    <span class="font-serif italic text-lg">∑</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">PhysMath Studio</h1>
+                        <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 dark:text-brand-400 border border-brand-500/20 font-semibold">Cloud PWA</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Chytrá knihovna vzorců s indexy a živým KaTeX náhledem</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Mode Switcher -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700/70">
+            <button id="modeScratchpadBtn" onclick="switchWorkspaceMode('scratchpad')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm">
+                <i class="ph ph-function text-base"></i>
+                <span>Rychlý vzorec</span>
+            </button>
+            <button id="modeNotebookBtn" onclick="switchWorkspaceMode('notebook')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="ph ph-notebook text-base"></i>
+                <span>Zápisník <span class="hidden md:inline">(MD + LaTeX)</span></span>
+            </button>
+        </div>
+
+        <!-- Right: Quick Palette, Cloud Sync & Theme -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Quick Command Palette Button -->
+            <button onclick="openCommandPalette()" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition" title="Rychlé vložení zkratkou (Alt + M)">
+                <i class="ph ph-magnifying-glass text-sm text-brand-500"></i>
+                <span class="hidden xl:inline">Rychle vložit...</span>
+                <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700">Alt+M</kbd>
+            </button>
+
+            <!-- Google Drive / Cloud Sync Hub -->
+            <button onclick="openCloudModal()" id="cloudSyncBtn" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium transition">
+                <i class="ph ph-cloud-check text-base" id="cloudStatusIcon"></i>
+                <span class="hidden md:inline" id="cloudStatusText">Google Drive & Záloha</span>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Přepnout světlý/tmavý režim">
+                <i id="themeIcon" class="ph ph-sun text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT LAYOUT -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- LEFT SIDEBAR: MINI LIBRARY OF SYMBOLS & SNIPPETS -->
+        <aside id="librarySidebar" class="w-80 sm:w-88 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 absolute lg:static inset-y-0 left-0 z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 shadow-2xl lg:shadow-none">
+            
+            <!-- Sidebar Header & Search -->
+            <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="ph ph-bookmarks-simple text-brand-500 text-lg"></i>
+                        <h2 class="font-semibold text-sm text-slate-800 dark:text-slate-100">Knihovna vzorců a symbolů</h2>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="openAddSnippetModal()" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium shadow-sm transition">
+                            <i class="ph ph-plus-bold"></i>
+                            <span>Vlastní</span>
+                        </button>
+                        <button onclick="toggleMobileSidebar()" class="lg:hidden p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <i class="ph ph-x text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search input -->
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="librarySearchInput" oninput="renderLibrary()" placeholder="Hledat vzorec nebo zkratku (např. intd, vec, ek)..." class="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500 text-slate-800 dark:text-slate-100 placeholder-slate-400">
+                    <button id="clearSearchBtn" onclick="clearLibrarySearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <i class="ph ph-x-circle text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Category Filter Pills -->
+                <div class="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar" id="categoryTabs">
+                    <!-- Rendered dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Helper tip banner -->
+            <div class="px-3.5 py-2 bg-indigo-50/70 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/40 flex items-center justify-between text-[11px] text-indigo-700 dark:text-indigo-300">
+                <span><i class="ph ph-info mr-1"></i>Kliknutím vložíš šablonu. Klávesou <strong>Tab</strong> skáčeš mezi indexy.</span>
+            </div>
+
+            <!-- Snippet Cards List -->
+            <div id="snippetListContainer" class="flex-1 overflow-y-auto p-3 grid grid-cols-1 gap-2 content-start">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span id="snippetCountLabel">0 šablon v knihovně</span>
+                <button onclick="resetDefaultSnippets()" class="hover:text-brand-500 underline">Obnovit výchozí</button>
+            </div>
+        </aside>
+
+        <!-- Backdrop for mobile sidebar -->
+        <div id="mobileSidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden"></div>
+
+        <!-- MAIN WORKSPACE AREA -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+
+            <!-- QUICK MODIFIER RIBBON (Top of Editor) -->
+            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline">Rychlé modifikátory:</span>
+                    
+                    <button onclick="insertSnippetTemplate('_{\\text{$1}}$0')" class="px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/50 hover:bg-brand-100 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800/60 text-xs font-medium flex items-center gap-1 transition shrink-0" title="Stojatý dolní index pro fyziku (např. F_max, E_k)">
+                        <span class="font-serif italic">X</span><sub class="font-sans not-italic text-[10px] font-bold">text</sub>
+                        <span class="hidden md:inline text-[11px] opacity-75 ml-0.5">(Stojatý index)</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('_{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Dolní index">
+                        <span class="font-serif italic">x<sub>i</sub></span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('^{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Horní index / mocnina">
+                        <span class="font-serif italic">x<sup>n</sup></span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('_{$1}^{$2}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Dolní i horní index současně">
+                        <span class="font-serif italic">x<sub>i</sub><sup>n</sup></span>
+                    </button>
+
+                    <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+                    <button onclick="insertSnippetTemplate('\\vec{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Vektorová šipka">
+                        <span>v&#8407;</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('\\hat{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Operátor / jednotkový vektor (stříška)">
+                        <span>e&#770;</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('\\dot{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Časová derivace (tečka)">
+                        <span>x&#775;</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('\\ddot{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Druhá časová derivace (dvě tečky)">
+                        <span>x&#776;</span>
+                    </button>
+
+                    <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+                    <button onclick="insertSnippetTemplate('\\frac{$1}{$2}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Zlomek">
+                        <span>a/b</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('\\sqrt{$1}$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Odmocnina">
+                        <span>√x</span>
+                    </button>
+
+                    <button onclick="insertSnippetTemplate('\\left( $1 \\right)$0')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition shrink-0" title="Automatické závorky \left( \right)">
+                        <span>(⋯)</span>
+                    </button>
+                </div>
+
+                <!-- Interactive Tabstop Navigation Pill (Crucial for iPad/Tablet & Visual Feedback) -->
+                <div id="tabstopStatusBar" class="hidden items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-xl text-xs font-medium tabstop-active-bar">
+                    <span class="flex items-center gap-1">
+                        <i class="ph ph-Steps text-sm"></i>
+                        <span>Aktivní indexy: <strong id="tabstopCounterText">1/2</strong></span>
+                    </span>
+                    <button onclick="jumpToNextTabstop()" class="px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs flex items-center gap-1 shadow-sm transition">
+                        <span>Další index (Tab)</span>
+                        <i class="ph ph-arrow-right-bold"></i>
+                    </button>
+                    <button onclick="clearActiveTabstops()" class="text-amber-500 hover:text-amber-700 dark:hover:text-amber-200 p-0.5" title="Ukončit skákání mezi indexy (Esc)">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- MODE 1: SCRATCHPAD (RYCHLÝ VZOREC) -->
+            <!-- ===================================================================== -->
+            <section id="workspaceScratchpad" class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-4 sm:p-6 gap-5">
+                
+                <!-- Left Column: LaTeX Code Editor -->
+                <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[260px]">
+                    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/50">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Zdrojový LaTeX vzorce</h3>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] text-slate-400 hidden sm:inline">Napiš zkratku (např. <code class="text-brand-500">intd</code>) + stiskni <kbd class="px-1 py-0.5 bg-slate-200 dark:bg-slate-800 rounded text-[10px]">Tab</kbd></span>
+                            <button onclick="clearScratchpad()" class="text-xs text-slate-400 hover:text-rose-500 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Vymazat vzorec">
+                                <i class="ph ph-trash"></i> Vymazat
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative flex-1 flex flex-col">
+                        <textarea id="scratchpadEditor" spellcheck="false" class="w-full flex-1 p-4 font-mono text-sm sm:text-base bg-transparent text-slate-900 dark:text-slate-100 focus:outline-none resize-none leading-relaxed" placeholder="Zde piš LaTeX vzorec nebo klikni na symbol v levé knihovně..."></textarea>
+                        
+                        <!-- Mobile / Tablet Floating Tab Button inside editor -->
+                        <div class="p-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="jumpToNextTabstop()" class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                                    <i class="ph ph-key-return"></i>
+                                    <span>Skočit na další index (Tab)</span>
+                                </button>
+                                <button onclick="expandAbbreviationAtCursor(document.getElementById('scratchpadEditor'))" class="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-medium transition" title="Rozbalit napsanou zkratku před kurzorem">
+                                    <i class="ph ph-magic-wand"></i> Rozbalit zkratku
+                                </button>
+                            </div>
+                            <span id="scratchpadSavedIndicator" class="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <i class="ph ph-check-circle"></i> Uloženo v prohlížeči
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Huge Live KaTeX Preview & Export Actions -->
+                <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[260px]">
+                    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/50">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Živý matematický náhled (KaTeX)</h3>
+                        </div>
+                        <button onclick="saveScratchpadToLibrary()" class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                            <i class="ph ph-bookmark-simple"></i> Uložit tento vzorec do knihovny
+                        </button>
+                    </div>
+
+                    <!-- Rendered Output Box -->
+                    <div class="flex-1 p-6 flex items-center justify-center overflow-auto bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-950/30">
+                        <div id="scratchpadPreview" class="text-xl sm:text-2xl md:text-3xl text-center select-all py-4"></div>
+                    </div>
+
+                    <!-- One-click Copy Bar -->
+                    <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 space-y-2.5">
+                        <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Rychlé kopírování do schránky:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <button onclick="copyScratchpad('raw')" class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium text-xs shadow-sm transition">
+                                <i class="ph ph-copy text-base"></i>
+                                <span>Čistý LaTeX</span>
+                            </button>
+                            <button onclick="copyScratchpad('markdown')" class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-medium text-xs transition">
+                                <i class="ph ph-currency-dollar text-base text-brand-500"></i>
+                                <span>Markdown <code class="font-mono">$$...$$</code></span>
+                            </button>
+                            <button onclick="copyScratchpad('overleaf')" class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-medium text-xs transition">
+                                <i class="ph ph-file-code text-base text-emerald-500"></i>
+                                <span>Overleaf <code class="font-mono">equation</code></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===================================================================== -->
+            <!-- MODE 2: NOTEBOOK (ZÁPISNÍK: MARKDOWN + LATEX) -->
+            <!-- ===================================================================== -->
+            <section id="workspaceNotebook" class="hidden flex-1 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-4 sm:p-6 gap-5">
+                
+                <!-- Left: Markdown + LaTeX Editor -->
+                <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[300px]">
+                    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/50">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-note-pencil text-brand-500"></i>
+                            <input id="noteTitleInput" oninput="saveNotebookState()" type="text" value="Fyzika & Matematika – Poznámky z přednášky" class="bg-transparent font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:underline w-56 sm:w-80">
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="insertSnippetTemplate('$$\n$1\n$$$0')" class="px-2 py-1 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs font-mono hover:bg-brand-500/20 transition" title="Vložit blokovou rovnici">
+                                + $$ Blok $$
+                            </button>
+                            <button onclick="insertSnippetTemplate('$$1$$0')" class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-mono hover:bg-slate-200 transition" title="Vložit řádkový vzorec">
+                                + $ Inline $
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea id="notebookEditor" spellcheck="false" class="w-full flex-1 p-4 font-mono text-sm bg-transparent text-slate-900 dark:text-slate-100 focus:outline-none resize-none leading-relaxed" placeholder="Piš poznámky v Markdownu. Pro vzorce v řádku použij $...$ a pro samostatné rovnice $$...$$"></textarea>
+
+                    <div class="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <button onclick="jumpToNextTabstop()" class="px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium flex items-center gap-1">
+                                <i class="ph ph-key-return"></i> Další index (Tab)
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadFile('md')" class="text-slate-600 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1">
+                                <i class="ph ph-download-simple"></i> Stáhnout .MD
+                            </button>
+                            <span class="text-slate-300 dark:text-slate-700">|</span>
+                            <button onclick="downloadFile('tex')" class="text-slate-600 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1">
+                                <i class="ph ph-file-text"></i> Export .TEX
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Live Rendered Document Preview -->
+                <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[300px]">
+                    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/50">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-eye text-emerald-500"></i>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Vysázený dokument</h3>
+                        </div>
+                        <span class="text-[11px] text-slate-400">Automatická sazba KaTeX + Markdown</span>
+                    </div>
+                    <div id="notebookPreview" class="flex-1 p-6 overflow-y-auto prose dark:prose-invert max-w-none space-y-3 text-sm sm:text-base leading-relaxed">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 1: QUICK COMMAND PALETTE (Alt + M) -->
+    <!-- ===================================================================== -->
+    <div id="commandPaletteModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden items-start justify-center pt-20 px-4">
+        <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden">
+            <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                <i class="ph ph-lightning text-brand-500 text-xl"></i>
+                <input id="paletteSearchInput" type="text" oninput="renderPaletteResults()" placeholder="Napiš zkratku nebo název vzorce (např. intd, pder, mat2, ek) a stiskni Enter..." class="w-full bg-transparent text-sm sm:text-base text-slate-900 dark:text-white focus:outline-none">
+                <button onclick="closeCommandPalette()" class="text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">Esc</button>
+            </div>
+            <div id="paletteResultsList" class="max-h-80 overflow-y-auto p-2 divide-y divide-slate-100 dark:divide-slate-800/60">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 2: ADD CUSTOM SNIPPET TO LIBRARY -->
+    <!-- ===================================================================== -->
+    <div id="addSnippetModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="ph ph-plus-circle text-brand-500 text-xl"></i>
+                    <span>Přidat vlastní vzorec do knihovny</span>
+                </h3>
+                <button onclick="closeAddSnippetModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 text-xs sm:text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Název vzorce *</label>
+                        <input id="newSnippetLabel" type="text" placeholder="např. Coulombův zákon" class="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Kategorie</label>
+                        <select id="newSnippetCategory" class="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                            <option value="Fyzika">Fyzika</option>
+                            <option value="Analýza">Analýza</option>
+                            <option value="Lineární algebra">Lineární algebra</option>
+                            <option value="Indexy">Indexy</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Rychlá zkratka (shortcut) *</label>
+                        <input id="newSnippetShortcut" type="text" placeholder="např. coul" class="w-full px-3 py-2 rounded-lg font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Náhledový LaTeX (volitelné)</label>
+                        <input id="newSnippetPreview" type="text" oninput="updateModalSnippetPreview()" placeholder="Pokud prázdné, použije se šablona" class="w-full px-3 py-2 rounded-lg font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-medium text-slate-700 dark:text-slate-300">Šablona se zástupnými indexy (<code class="text-brand-500">$1</code>, <code class="text-brand-500">$2</code>, <code class="text-brand-500">$0</code>) *</label>
+                    </div>
+                    <textarea id="newSnippetTemplate" rows="3" oninput="updateModalSnippetPreview()" placeholder="např. F_{\text{e}} = \frac{1}{4\pi\varepsilon_0} \frac{$1 \cdot $2}{$3^2} $0" class="w-full p-3 rounded-lg font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500"></textarea>
+                    <p class="text-[11px] text-slate-400 mt-1">Značka <strong>$1</strong> určuje, kam skočí kurzor ihned po vložení. Po stisku <strong>Tab</strong> skočí na <strong>$2</strong> a nakonec na <strong>$0</strong>.</p>
+                </div>
+
+                <!-- Live preview inside modal -->
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <span class="text-xs text-slate-400">Živý náhled karty:</span>
+                    <div id="newSnippetLivePreview" class="text-base"></div>
+                </div>
+            </div>
+
+            <div class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
+                <button onclick="closeAddSnippetModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300">Zrušit</button>
+                <button onclick="saveCustomSnippet()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-sm">Uložit do knihovny</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 3: GOOGLE DRIVE & CLOUD SYNC HUB -->
+    <!-- ===================================================================== -->
+    <div id="cloudModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                        <i class="ph ph-cloud-arrow-up text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">Cloud & Google Drive Synchronizace</h3>
+                        <p class="text-xs text-slate-400">Měj svou knihovnu vzorců a poznámky dostupné odkudkoliv</p>
+                    </div>
+                </div>
+                <button onclick="closeCloudModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-5 text-xs sm:text-sm">
+                
+                <!-- 1. Instant File Backup / Restore (Works immediately with Google Drive folder) -->
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/70 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold flex items-center gap-2">
+                            <i class="ph ph-hard-drive text-brand-500 text-base"></i>
+                            <span>1. Okamžitý přenos přes soubor <code class="font-mono text-xs">physmath_cloud.json</code></span>
+                        </h4>
+                        <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">Funguje ihned bez registrace API</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Celou svou knihovnu vlastních vzorců i rozepsané poznámky si můžeš jedním klikem uložit do souboru přímo do své složky <strong>Google Drive</strong> v počítači nebo v prohlížeči a na jiném zařízení ho zase načíst.
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <button onclick="exportFullWorkspaceJSON()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                            <i class="ph ph-download-simple text-base"></i>
+                            <span>Stáhnout kompletní zálohu (.JSON)</span>
+                        </button>
+                        <label class="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition">
+                            <i class="ph ph-upload-simple text-base"></i>
+                            <span>Načíst zálohu z disku (.JSON)</span>
+                            <input type="file" accept=".json" onchange="importFullWorkspaceJSON(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 2. Direct Google Drive REST API Sync -->
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/70 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold flex items-center gap-2">
+                            <i class="ph ph-google-drive-logo text-emerald-500 text-base"></i>
+                            <span>2. Přímé napojení na Google Drive API</span>
+                        </h4>
+                        <span id="gdriveConnectionBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Připraveno ke konfiguraci</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Pokud si tuto stránku nahraješ zdarma na <strong>GitHub Pages</strong>, vlož sem své <code class="font-mono">CLIENT_ID</code> z Google Cloud Console. Aplikace pak bude automaticky synchronizovat soubor <code class="font-mono">physmath_cloud.json</code> přímo s tvým Google Diskem na pozadí.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Google OAuth Client ID</label>
+                            <input id="gdriveClientIdInput" type="text" placeholder="123456789-abc.apps.googleusercontent.com" class="w-full px-3 py-1.5 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Název souboru na Google Disku</label>
+                            <input id="gdriveFilenameInput" type="text" value="physmath_studio_sync.json" class="w-full px-3 py-1.5 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        <button onclick="triggerCloudSyncSimulation()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                            <i class="ph ph-arrows-clockwise text-base"></i>
+                            <span>Synchronizovat s Google Drive</span>
+                        </button>
+                        <span id="lastSyncTimeText" class="text-[11px] text-slate-400 ml-1">Poslední lokální uložení: právě teď</span>
+                    </div>
+                </div>
+
+                <!-- 3. Step-by-step Hosting Guide -->
+                <div class="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/40 space-y-2">
+                    <h4 class="font-semibold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                        <i class="ph ph-rocket-launch"></i> Jak mít tuto aplikaci zdarma na vlastní adrese za 2 minuty:
+                    </h4>
+                    <ol class="list-decimal list-inside text-xs text-slate-600 dark:text-slate-300 space-y-1 leading-relaxed">
+                        <li>Ulož si tento kód jako soubor <strong>index.html</strong>.</li>
+                        <li>Vytvoř si bezplatný repozitář na <strong>GitHub.com</strong> nebo přetáhni soubor na <strong>app.netlify.com/drop</strong>.</li>
+                        <li>Získáš vlastní webovou adresu (např. <code class="font-mono">moje-matika.netlify.app</code>), kterou si můžeš otevřít na mobilu, iPadu nebo školním PC a přidat na plochu.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                <button onclick="closeCloudModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white">Hotovo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ===================================================================== -->
+    <!-- APPLICATION LOGIC (JAVASCRIPT) -->
+    <!-- ===================================================================== -->
+    <script>
+        // ---------------------------------------------------------------------
+        // 1. DEFAULT SNIPPET LIBRARY (PHYSICS & UNIVERSITY MATHEMATICS)
+        // ---------------------------------------------------------------------
+        const DEFAULT_SNIPPETS = [
+            // --- FYZIKA ---
+            {
+                id: 'phys_sub_text',
+                category: 'Fyzika',
+                label: 'Fyzikální veličina se stojatým indexem',
+                shortcut: 'fsub',
+                preview: 'F_{\\text{max}}',
+                snippet: '$1_{\\text{$2}}$0'
+            },
+            {
+                id: 'phys_vec_index',
+                category: 'Fyzika',
+                label: 'Vektor síly / veličiny s indexem',
+                shortcut: 'fvec',
+                preview: '\\vec{F}_{\\text{g}}',
+                snippet: '\\vec{$1}_{\\text{$2}}$0'
+            },
+            {
+                id: 'phys_ek',
+                category: 'Fyzika',
+                label: 'Kinetická energie',
+                shortcut: 'ek',
+                preview: 'E_{\\text{k}} = \\frac{1}{2} m v^2',
+                snippet: 'E_{\\text{k}} = \\frac{1}{2} m_{$1} v_{$1}^2 $0'
+            },
+            {
+                id: 'phys_newton2',
+                category: 'Fyzika',
+                label: '2. Newtonův pohybový zákon (diferenciální)',
+                shortcut: 'ndyn',
+                preview: '\\vec{F} = \\frac{\\mathrm{d}\\vec{p}}{\\mathrm{d}t} = m\\frac{\\mathrm{d}^2\\vec{r}}{\\mathrm{d}t^2}',
+                snippet: '\\vec{F}_{$1} = \\frac{\\mathrm{d}\\vec{p}}{\\mathrm{d}t} = m \\frac{\\mathrm{d}^2 \\vec{$2}}{\\mathrm{d}t^2} $0'
+            },
+            {
+                id: 'phys_nabla',
+                category: 'Fyzika',
+                label: 'Gradient / Nabla operátor',
+                shortcut: 'grad',
+                preview: '\\nabla \\varphi = \\left( \\frac{\\partial \\varphi}{\\partial x}, \\frac{\\partial \\varphi}{\\partial y}, \\frac{\\partial \\varphi}{\\partial z} \\right)',
+                snippet: '\\nabla $1 = \\left( \\frac{\\partial $1}{\\partial x}, \\frac{\\partial $1}{\\partial y}, \\frac{\\partial $1}{\\partial z} \\right) $0'
+            },
+            {
+                id: 'phys_oint',
+                category: 'Fyzika',
+                label: 'Křivkový integrál po uzavřené křivce',
+                shortcut: 'oint',
+                preview: '\\oint_{C} \\vec{E} \\cdot \\mathrm{d}\\vec{l}',
+                snippet: '\\oint_{$1} \\vec{$2} \\cdot \\mathrm{d}\\vec{$3} $0'
+            },
+            {
+                id: 'phys_schrod',
+                category: 'Fyzika',
+                label: 'Schrödingerova rovnice / Vlnová fce',
+                shortcut: 'psi',
+                preview: '\\mathrm{i}\\hbar \\frac{\\partial \\Psi}{\\partial t} = \\hat{H}\\Psi',
+                snippet: '\\mathrm{i}\\hbar \\frac{\\partial \\Psi($1, t)}{\\partial t} = \\hat{H}\\Psi($1, t) $0'
+            },
+
+            // --- ANALÝZA ---
+            {
+                id: 'math_int_def',
+                category: 'Analýza',
+                label: 'Určitý integrál s mezemi',
+                shortcut: 'intd',
+                preview: '\\int_{a}^{b} f(x) \\,\\mathrm{d}x',
+                snippet: '\\int_{$1}^{$2} $3 \\,\\mathrm{d}$4 $0'
+            },
+            {
+                id: 'math_pder',
+                category: 'Analýza',
+                label: 'Parciální derivace 1. řádu',
+                shortcut: 'pder',
+                preview: '\\frac{\\partial f}{\\partial x}',
+                snippet: '\\frac{\\partial $1}{\\partial $2} $0'
+            },
+            {
+                id: 'math_pder2',
+                category: 'Analýza',
+                label: 'Parciální derivace 2. řádu',
+                shortcut: 'pder2',
+                preview: '\\frac{\\partial^2 f}{\\partial x^2}',
+                snippet: '\\frac{\\partial^2 $1}{\\partial $2^2} $0'
+            },
+            {
+                id: 'math_der',
+                category: 'Analýza',
+                label: 'Obyčejná derivace podle proměnné',
+                shortcut: 'der',
+                preview: '\\frac{\\mathrm{d}y}{\\mathrm{d}x}',
+                snippet: '\\frac{\\mathrm{d}$1}{\\mathrm{d}$2} $0'
+            },
+            {
+                id: 'math_sum',
+                category: 'Analýza',
+                label: 'Suma s dolní a horní mezí',
+                shortcut: 'sum',
+                preview: '\\sum_{i=1}^{n} a_i',
+                snippet: '\\sum_{$1=$2}^{$3} $4 $0'
+            },
+            {
+                id: 'math_lim',
+                category: 'Analýza',
+                label: 'Limita funkce',
+                shortcut: 'lim',
+                preview: '\\lim_{x \\to \\infty} f(x)',
+                snippet: '\\lim_{$1 \\to $2} $3 $0'
+            },
+
+            // --- LINEÁRNÍ ALGEBRA ---
+            {
+                id: 'linalg_mat2',
+                category: 'Lineární algebra',
+                label: 'Matice 2×2 v kulatých závorkách',
+                shortcut: 'mat2',
+                preview: '\\begin{pmatrix} a_{11} & a_{12} \\\\ a_{21} & a_{22} \\end{pmatrix}',
+                snippet: '\\begin{pmatrix} $1 & $2 \\\\ $3 & $4 \\end{pmatrix} $0'
+            },
+            {
+                id: 'linalg_mat3',
+                category: 'Lineární algebra',
+                label: 'Matice 3×3 v kulatých závorkách',
+                shortcut: 'mat3',
+                preview: '\\begin{pmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{pmatrix}',
+                snippet: '\\begin{pmatrix} $1 & $2 & $3 \\\\ $4 & $5 & $6 \\\\ $7 & $8 & $9 \\end{pmatrix} $0'
+            },
+            {
+                id: 'linalg_det2',
+                category: 'Lineární algebra',
+                label: 'Determinant 2×2',
+                shortcut: 'det2',
+                preview: '\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}',
+                snippet: '\\begin{vmatrix} $1 & $2 \\\\ $3 & $4 \\end{vmatrix} $0'
+            },
+            {
+                id: 'linalg_scal',
+                category: 'Lineární algebra',
+                label: 'Skalární součin / Bra-Ket',
+                shortcut: 'scal',
+                preview: '\\langle \\vec{u}, \\vec{v} \\rangle',
+                snippet: '\\langle $1, $2 \\rangle $0'
+            },
+            {
+                id: 'linalg_norm',
+                category: 'Lineární algebra',
+                label: 'Norma vektoru',
+                shortcut: 'norm',
+                preview: '\\| \\vec{x} \\|',
+                snippet: '\\| $1 \\| $0'
+            },
+
+            // --- INDEXY A MODIFIKÁTORY ---
+            {
+                id: 'mod_sub_text',
+                category: 'Indexy',
+                label: 'Stojatý dolní index (ČSN normy)',
+                shortcut: 'subt',
+                preview: 'x_{\\text{index}}',
+                snippet: '_{\\text{$1}}$0'
+            },
+            {
+                id: 'mod_subsup',
+                category: 'Indexy',
+                label: 'Dolní i horní index zároveň',
+                shortcut: 'ih',
+                preview: 'T_{i}^{j}',
+                snippet: '$1_{$2}^{$3}$0'
+            },
+            {
+                id: 'mod_frac',
+                category: 'Indexy',
+                label: 'Zlomek',
+                shortcut: 'frac',
+                preview: '\\frac{a}{b}',
+                snippet: '\\frac{$1}{$2}$0'
+            },
+            {
+                id: 'mod_sqrt',
+                category: 'Indexy',
+                label: 'n-tá odmocnina',
+                shortcut: 'nth',
+                preview: '\\sqrt[n]{x}',
+                snippet: '\\sqrt[$1]{$2}$0'
+            },
+            {
+                id: 'mod_cases',
+                category: 'Indexy',
+                label: 'Rozvětvený předpis (složená závorka)',
+                shortcut: 'cases',
+                preview: 'f(x) = \\begin{cases} 1 & x \\ge 0 \\\\ 0 & x < 0 \\end{cases}',
+                snippet: '\\begin{cases} $1 & \\text{pro } $2 \\\\ $3 & \\text{pro } $4 \\end{cases}$0'
+            }
+        ];
+
+        const CATEGORIES = ['Vše', 'Fyzika', 'Analýza', 'Lineární algebra', 'Indexy'];
+
+        // ---------------------------------------------------------------------
+        // 2. APPLICATION STATE
+        // ---------------------------------------------------------------------
+        let snippets = [];
+        let activeCategory = 'Vše';
+        let currentMode = 'scratchpad'; // 'scratchpad' | 'notebook'
+        let activeTabstops = []; // Array of { index: number, marker: string }
+        let currentTabstopStep = 0;
+
+        const DEFAULT_SCRATCHPAD = `\\vec{F}_{\\text{výsl}} = \\sum_{i=1}^{n} \\vec{F}_i = m \\frac{\\mathrm{d}^2 \\vec{r}}{\\mathrm{d}t^2}`;
+        const DEFAULT_NOTEBOOK = `# Mechanika a Elektřina – Přehled vzorců
+
+Při psaní fyzikálních protokolů v Česku píšeme **popisné indexy stojatým písmem** (např. $E_{\\text{k}}$, $F_{\\text{max}}$, $v_{\\text{výsl}}$) a indexy představující proměnné nebo souřadnice *kurzívou* ($F_i$, $v_x$).
+
+## 1. Zákon zachování mechanické energie
+Celková mechanická energie izolované soustavy v konzervativním silovém poli zůstává konstantní:
+
+$$
+E = E_{\\text{k}} + E_{\\text{p}} = \\frac{1}{2} m v^2 + \\int_{\\vec{r}_0}^{\\vec{r}} \\vec{F}_{\\text{konz}} \\cdot \\mathrm{d}\\vec{r} = \\text{konst.}
+$$
+
+## 2. Maxwellovy rovnice v diferenciálním tvaru
+Vztah mezi rotací elektrické intenzity $\\vec{E}$ a časovou změnou magnetické indukce $\\vec{B}$:
+
+$$
+\\nabla \\times \\vec{E} = -\\frac{\\partial \\vec{B}}{\\partial t}
+$$
+
+*Tip: Klikni kamkoliv do textu vlevo a vyber vzorec z levé knihovny nebo stiskni **Alt + M**!*`;
+
+        // ---------------------------------------------------------------------
+        // 3. INITIALIZATION
+        // ---------------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromStorage();
+            renderCategoryTabs();
+            renderLibrary();
+
+            const scratchpadEl = document.getElementById('scratchpadEditor');
+            const notebookEl = document.getElementById('notebookEditor');
+
+            // Setup editor listeners
+            scratchpadEl.addEventListener('input', () => {
+                renderScratchpadPreview();
+                saveScratchpadState();
+            });
+            scratchpadEl.addEventListener('keydown', handleEditorKeydown);
+
+            notebookEl.addEventListener('input', () => {
+                renderNotebookPreview();
+                saveNotebookState();
+            });
+            notebookEl.addEventListener('keydown', handleEditorKeydown);
+
+            // Global keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                // Alt + M opens Quick Command Palette
+                if (e.altKey && e.key.toLowerCase() === 'm') {
+                    e.preventDefault();
+                    openCommandPalette();
+                }
+                // Escape closes modals or clears active tabstops
+                if (e.key === 'Escape') {
+                    closeCommandPalette();
+                    closeAddSnippetModal();
+                    closeCloudModal();
+                    clearActiveTabstops();
+                }
+            });
+
+            renderScratchpadPreview();
+            renderNotebookPreview();
+        });
+
+        function loadStateFromStorage() {
+            try {
+                const savedSnippets = localStorage.getItem('physmath_snippets_v1');
+                snippets = savedSnippets ? JSON.parse(savedSnippets) : [...DEFAULT_SNIPPETS];
+
+                const savedScratchpad = localStorage.getItem('physmath_scratchpad_v1');
+                document.getElementById('scratchpadEditor').value = savedScratchpad !== null ? savedScratchpad : DEFAULT_SCRATCHPAD;
+
+                const savedNotebook = localStorage.getItem('physmath_notebook_v1');
+                document.getElementById('notebookEditor').value = savedNotebook !== null ? savedNotebook : DEFAULT_NOTEBOOK;
+
+                const savedTitle = localStorage.getItem('physmath_notetitle_v1');
+                if (savedTitle) document.getElementById('noteTitleInput').value = savedTitle;
+            } catch (e) {
+                snippets = [...DEFAULT_SNIPPETS];
+            }
+        }
+
+        function saveSnippetsToStorage() {
+            localStorage.setItem('physmath_snippets_v1', JSON.stringify(snippets));
+        }
+
+        function saveScratchpadState() {
+            localStorage.setItem('physmath_scratchpad_v1', document.getElementById('scratchpadEditor').value);
+        }
+
+        function saveNotebookState() {
+            localStorage.setItem('physmath_notebook_v1', document.getElementById('notebookEditor').value);
+            localStorage.setItem('physmath_notetitle_v1', document.getElementById('noteTitleInput').value);
+        }
+
+        // ---------------------------------------------------------------------
+        // 4. RENDERING THE SNIPPET LIBRARY SIDEBAR
+        // ---------------------------------------------------------------------
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            container.innerHTML = CATEGORIES.map(cat => {
+                const isActive = cat === activeCategory;
+                return `
+                    <button onclick="setCategory('${cat}')" class="px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition ${
+                        isActive 
+                        ? 'bg-brand-600 text-white shadow-xs' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }">
+                        ${cat}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function setCategory(cat) {
+            activeCategory = cat;
+            renderCategoryTabs();
+            renderLibrary();
+        }
+
+        function clearLibrarySearch() {
+            document.getElementById('librarySearchInput').value = '';
+            renderLibrary();
+        }
+
+        function renderLibrary() {
+            const query = document.getElementById('librarySearchInput').value.trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            clearBtn.classList.toggle('hidden', !query);
+
+            const filtered = snippets.filter(item => {
+                const matchesCat = activeCategory === 'Vše' || item.category === activeCategory;
+                const matchesQuery = !query || 
+                    item.label.toLowerCase().includes(query) || 
+                    item.shortcut.toLowerCase().includes(query) ||
+                    item.snippet.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            document.getElementById('snippetCountLabel').textContent = `${filtered.length} šablon v knihovně`;
+
+            const container = document.getElementById('snippetListContainer');
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 px-4 text-slate-400 text-xs space-y-2">
+                        <i class="ph ph-magnifying-glass text-2xl"></i>
+                        <p>Žádný vzorec neodpovídá hledání.</p>
+                        <button onclick="openAddSnippetModal()" class="text-brand-500 underline">+ Přidat vlastní vzorec</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => `
+                <div onclick="insertSnippetById('${item.id}')" class="group relative p-3 rounded-xl border border-slate-200 dark:border-slate-800/90 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-brand-50/40 dark:hover:bg-slate-800 hover:border-brand-400 dark:hover:border-brand-500/60 cursor-pointer transition-all flex flex-col gap-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-medium text-slate-700 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition truncate">${escapeHtml(item.label)}</span>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <span class="px-1.5 py-0.5 text-[10px] font-mono font-semibold rounded bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300" title="Napiš v editoru '${escapeHtml(item.shortcut)}' a stiskni Tab">${escapeHtml(item.shortcut)}</span>
+                            ${item.isCustom ? `
+                                <button onclick="deleteCustomSnippet(event, '${item.id}')" class="p-1 text-slate-400 hover:text-rose-500" title="Smazat vlastní vzorec">
+                                    <i class="ph ph-trash text-xs"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="py-1.5 px-2 rounded-lg bg-white dark:bg-slate-900/90 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center min-h-[42px] overflow-x-auto" id="preview_${item.id}">
+                        <!-- KaTeX rendered here -->
+                    </div>
+                </div>
+            `).join('');
+
+            // Render KaTeX inside each card
+            filtered.forEach(item => {
+                const el = document.getElementById(`preview_${item.id}`);
+                if (el) {
+                    try {
+                        katex.render(item.preview || cleanSnippetForPreview(item.snippet), el, {
+                            throwOnError: false,
+                            displayMode: false
+                        });
+                    } catch (err) {
+                        el.textContent = item.preview;
+                    }
+                }
+            });
+        }
+
+        function cleanSnippetForPreview(snippetStr) {
+            return snippetStr
+                .replace(/\$1/g, 'x')
+                .replace(/\$2/g, 'y')
+                .replace(/\$\d+/g, '');
+        }
+
+        // ---------------------------------------------------------------------
+        // 5. SMART SNIPPET INSERTION & TABSTOP ENGINE ($1 -> $2 -> $0)
+        // ---------------------------------------------------------------------
+        function getActiveTextarea() {
+            return currentMode === 'scratchpad' 
+                ? document.getElementById('scratchpadEditor') 
+                : document.getElementById('notebookEditor');
+        }
+
+        function insertSnippetById(id) {
+            const item = snippets.find(s => s.id === id);
+            if (!item) return;
+            insertSnippetTemplate(item.snippet);
+
+            // Close mobile sidebar if on small screen
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('librarySidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleMobileSidebar();
+                }
+            }
+        }
+
+        /**
+         * Core Tabstop Insertion Engine:
+         * Supports wrapping selected text into $1 and navigating through •1, •2, etc.
+         * We use a subtle visual placeholder token `▢` or direct selection range so the user
+         * sees exactly which index they are filling in!
+         */
+        function insertSnippetTemplate(rawTemplate) {
+            const textarea = getActiveTextarea();
+            textarea.focus();
+
+            const selStart = textarea.selectionStart;
+            const selEnd = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(selStart, selEnd);
+
+            let working = rawTemplate;
+
+            // If user highlighted an expression (e.g. "x+1") and clicked Fraction, wrap it in $1
+            if (selectedText.length > 0 && working.includes('$1')) {
+                working = working.replace('$1', selectedText);
+            }
+
+            // Convert remaining $1..$9 into visible placeholder markers `▢` except the very first stop
+            // so the user can jump between them seamlessly using Tab!
+            const placeholderOrder = ['$1', '$2', '$3', '$4', '$5', '$6', '$7', '$8', '$9', '$0'];
+            const existingMarkers = placeholderOrder.filter(m => working.includes(m));
+
+            if (existingMarkers.length === 0) {
+                textarea.setRangeText(working, selStart, selEnd, 'end');
+                triggerEditorUpdate();
+                return;
+            }
+
+            // Replace markers with temporary visual boxes `▢` (except $0 which is just end of formula)
+            let firstStopOffset = -1;
+            let remainingStopsCount = 0;
+
+            // Replace $1..$9 with `▢` so user can jump to each `▢` with Tab
+            for (let i = 1; i <= 9; i++) {
+                const token = '$' + i;
+                if (working.includes(token)) {
+                    if (firstStopOffset === -1) {
+                        firstStopOffset = working.indexOf(token);
+                        working = working.replace(token, ''); // Cursor goes right here immediately
+                    } else {
+                        working = working.replace(new RegExp('\\$' + i, 'g'), '▢');
+                        remainingStopsCount++;
+                    }
+                }
+            }
+
+            // Handle $0 (final exit position)
+            if (working.includes('$0')) {
+                if (firstStopOffset === -1) {
+                    firstStopOffset = working.indexOf('$0');
+                    working = working.replace('$0', '');
+                } else {
+                    working = working.replace('$0', '◊'); // End marker
+                    remainingStopsCount++;
+                }
+            }
+
+            // Insert into textarea
+            textarea.setRangeText(working, selStart, selEnd, 'end');
+
+            const newCursorPos = selStart + (firstStopOffset !== -1 ? firstStopOffset : working.length);
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+            updateTabstopUI(textarea);
+            triggerEditorUpdate();
+        }
+
+        function jumpToNextTabstop() {
+            const textarea = getActiveTextarea();
+            textarea.focus();
+            const val = textarea.value;
+
+            // Find next `▢` placeholder first
+            let nextBoxIndex = val.indexOf('▢');
+            if (nextBoxIndex !== -1) {
+                // Remove the `▢` and put cursor right there
+                textarea.setRangeText('', nextBoxIndex, nextBoxIndex + 1, 'end');
+                textarea.setSelectionRange(nextBoxIndex, nextBoxIndex);
+                updateTabstopUI(textarea);
+                triggerEditorUpdate();
+                return true;
+            }
+
+            // Otherwise check for final exit marker `◊`
+            let endMarkerIndex = val.indexOf('◊');
+            if (endMarkerIndex !== -1) {
+                textarea.setRangeText('', endMarkerIndex, endMarkerIndex + 1, 'end');
+                textarea.setSelectionRange(endMarkerIndex, endMarkerIndex);
+                updateTabstopUI(textarea);
+                triggerEditorUpdate();
+                return true;
+            }
+
+            updateTabstopUI(textarea);
+            return false;
+        }
+
+        function clearActiveTabstops() {
+            const textarea = getActiveTextarea();
+            const pos = textarea.selectionStart;
+            textarea.value = textarea.value.replace(/[▢◊]/g, '');
+            textarea.setSelectionRange(pos, pos);
+            updateTabstopUI(textarea);
+            triggerEditorUpdate();
+        }
+
+        function updateTabstopUI(textarea) {
+            const val = textarea.value;
+            const boxes = (val.match(/▢/g) || []).length;
+            const endMarkers = (val.match(/◊/g) || []).length;
+            const totalRemaining = boxes + endMarkers;
+
+            const bar = document.getElementById('tabstopStatusBar');
+            const counterText = document.getElementById('tabstopCounterText');
+
+            if (totalRemaining > 0) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                counterText.textContent = `zbývá ${totalRemaining}`;
+            } else {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+        }
+
+        /**
+         * Keyboard handler inside editor:
+         * 1. Checks if word right before cursor matches a snippet shortcut (e.g. `intd` + Tab)
+         * 2. Or jumps to next `▢` tabstop on Tab press!
+         */
+        function handleEditorKeydown(e) {
+            const textarea = e.target;
+
+            if (e.key === 'Tab' && !e.shiftKey) {
+                // First check if user typed a shortcut like `intd` or `ek` right before cursor
+                if (expandAbbreviationAtCursor(textarea)) {
+                    e.preventDefault();
+                    return;
+                }
+
+                // Next check if there are active tabstop placeholders `▢` or `◊`
+                if (textarea.value.includes('▢') || textarea.value.includes('◊')) {
+                    e.preventDefault();
+                    jumpToNextTabstop();
+                    return;
+                }
+            }
+        }
+
+        function expandAbbreviationAtCursor(textarea) {
+            const pos = textarea.selectionStart;
+            if (pos !== textarea.selectionEnd) return false;
+
+            const textBefore = textarea.value.substring(0, pos);
+            const match = textBefore.match(/([a-zA-Z0-9_]+)$/);
+            if (!match) return false;
+
+            const word = match[1].toLowerCase();
+            const matchedSnippet = snippets.find(s => s.shortcut.toLowerCase() === word);
+
+            if (matchedSnippet) {
+                const wordStart = pos - word.length;
+                textarea.setSelectionRange(wordStart, pos);
+                insertSnippetTemplate(matchedSnippet.snippet);
+                showToast(`Rozbalena zkratka "${word}" → ${matchedSnippet.label}`);
+                return true;
+            }
+            return false;
+        }
+
+        function triggerEditorUpdate() {
+            if (currentMode === 'scratchpad') {
+                renderScratchpadPreview();
+                saveScratchpadState();
+            } else {
+                renderNotebookPreview();
+                saveNotebookState();
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // 6. LIVE KATEX & MARKDOWN PREVIEW RENDERING
+        // ---------------------------------------------------------------------
+        function renderScratchpadPreview() {
+            const textarea = document.getElementById('scratchpadEditor');
+            const previewEl = document.getElementById('scratchpadPreview');
+            updateTabstopUI(textarea);
+
+            let rawLatex = textarea.value.trim();
+            if (!rawLatex) {
+                previewEl.innerHTML = `<span class="text-slate-400 text-sm font-sans italic">Zde se okamžitě zobrazí vysázený vzorec...</span>`;
+                return;
+            }
+
+            // Visually highlight remaining `▢` placeholders inside KaTeX preview
+            const previewLatex = rawLatex
+                .replace(/▢/g, '\\square ')
+                .replace(/◊/g, '');
+
+            try {
+                katex.render(previewLatex, previewEl, {
+                    displayMode: true,
+                    throwOnError: false
+                });
+            } catch (err) {
+                previewEl.innerHTML = `<div class="text-rose-500 text-xs font-mono">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderNotebookPreview() {
+            const textarea = document.getElementById('notebookEditor');
+            const previewEl = document.getElementById('notebookPreview');
+            updateTabstopUI(textarea);
+
+            let raw = textarea.value
+                .replace(/▢/g, '\\square ')
+                .replace(/◊/g, '');
+
+            // 1. Extract Display Math $$...$$
+            const displayBlocks = [];
+            raw = raw.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+                const id = `@@DISPLAY_MATH_${displayBlocks.length}@@`;
+                displayBlocks.push(math);
+                return id;
+            });
+
+            // 2. Extract Inline Math $...$
+            const inlineBlocks = [];
+            raw = raw.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
+                const id = `@@INLINE_MATH_${inlineBlocks.length}@@`;
+                inlineBlocks.push(math);
+                return id;
+            });
+
+            // 3. Lightweight Markdown formatting
+            let html = escapeHtml(raw)
+                .replace(/^### (.*$)/gim, '<h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mt-4 mb-1">$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 dark:text-white mt-5 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-3">$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-white">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                .replace(/\n\n/g, '</p><p class="my-2">')
+                .replace(/\n/g, '<br>');
+
+            html = `<p class="my-2">${html}</p>`;
+
+            // 4. Restore and render Display Math
+            html = html.replace(/@@DISPLAY_MATH_(\d+)@@/g, (_, idx) => {
+                const latex = displayBlocks[Number(idx)];
+                try {
+                    return `<div class="my-3 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 overflow-x-auto">${katex.renderToString(latex, { displayMode: true, throwOnError: false })}</div>`;
+                } catch (e) {
+                    return `<code class="text-rose-500">${escapeHtml(latex)}</code>`;
+                }
+            });
+
+            // 5. Restore and render Inline Math
+            html = html.replace(/@@INLINE_MATH_(\d+)@@/g, (_, idx) => {
+                const latex = inlineBlocks[Number(idx)];
+                try {
+                    return katex.renderToString(latex, { displayMode: false, throwOnError: false });
+                } catch (e) {
+                    return `<code class="text-rose-500">${escapeHtml(latex)}</code>`;
+                }
+            });
+
+            previewEl.innerHTML = html;
+        }
+
+        // ---------------------------------------------------------------------
+        // 7. WORKSPACE SWITCHING & COPY HELPERS
+        // ---------------------------------------------------------------------
+        function switchWorkspaceMode(mode) {
+            currentMode = mode;
+            const scratchSec = document.getElementById('workspaceScratchpad');
+            const noteSec = document.getElementById('workspaceNotebook');
+            const btnScratch = document.getElementById('modeScratchpadBtn');
+            const btnNote = document.getElementById('modeNotebookBtn');
+
+            const activeClasses = ['bg-white', 'dark:bg-slate-900', 'text-brand-600', 'dark:text-brand-400', 'shadow-sm'];
+            const inactiveClasses = ['text-slate-600', 'dark:text-slate-400'];
+
+            if (mode === 'scratchpad') {
+                scratchSec.classList.remove('hidden');
+                scratchSec.classList.add('flex');
+                noteSec.classList.add('hidden');
+                noteSec.classList.remove('flex');
+
+                btnScratch.classList.add(...activeClasses);
+                btnScratch.classList.remove(...inactiveClasses);
+                btnNote.classList.remove(...activeClasses);
+                btnNote.classList.add(...inactiveClasses);
+                renderScratchpadPreview();
+            } else {
+                noteSec.classList.remove('hidden');
+                noteSec.classList.add('flex');
+                scratchSec.classList.add('hidden');
+                scratchSec.classList.remove('flex');
+
+                btnNote.classList.add(...activeClasses);
+                btnNote.classList.remove(...inactiveClasses);
+                btnScratch.classList.remove(...activeClasses);
+                btnScratch.classList.add(...inactiveClasses);
+                renderNotebookPreview();
+            }
+        }
+
+        function clearScratchpad() {
+            const el = document.getElementById('scratchpadEditor');
+            el.value = '';
+            renderScratchpadPreview();
+            saveScratchpadState();
+            el.focus();
+        }
+
+        function copyScratchpad(format) {
+            const raw = document.getElementById('scratchpadEditor').value.replace(/[▢◊]/g, '').trim();
+            if (!raw) {
+                showToast('Editor vzorce je prázdný', 'warn');
+                return;
+            }
+
+            let output = raw;
+            if (format === 'markdown') {
+                output = `$$\n${raw}\n$$`;
+            } else if (format === 'overleaf') {
+                output = `\\begin{equation}\n    ${raw}\n\\end{equation}`;
+            }
+
+            copyToClipboard(output);
+            showToast('Zkopírováno do schránky!');
+        }
+
+        function copyToClipboard(text) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+        }
+
+        // ---------------------------------------------------------------------
+        // 8. ADDING & MANAGING CUSTOM SNIPPETS
+        // ---------------------------------------------------------------------
+        function openAddSnippetModal(prefillLatex = '') {
+            document.getElementById('newSnippetLabel').value = '';
+            document.getElementById('newSnippetShortcut').value = '';
+            document.getElementById('newSnippetPreview').value = '';
+            document.getElementById('newSnippetTemplate').value = prefillLatex || '\\vec{$1}_{\\text{$2}} = $0';
+            document.getElementById('addSnippetModal').classList.remove('hidden');
+            document.getElementById('addSnippetModal').classList.add('flex');
+            updateModalSnippetPreview();
+            document.getElementById('newSnippetLabel').focus();
+        }
+
+        function closeAddSnippetModal() {
+            document.getElementById('addSnippetModal').classList.add('hidden');
+            document.getElementById('addSnippetModal').classList.remove('flex');
+        }
+
+        function saveScratchpadToLibrary() {
+            const currentLatex = document.getElementById('scratchpadEditor').value.replace(/[▢◊]/g, '').trim();
+            openAddSnippetModal(currentLatex ? currentLatex + ' $0' : '');
+        }
+
+        function updateModalSnippetPreview() {
+            const previewInput = document.getElementById('newSnippetPreview').value.trim();
+            const templateInput = document.getElementById('newSnippetTemplate').value.trim();
+            const target = document.getElementById('newSnippetLivePreview');
+
+            const latexToRender = previewInput || cleanSnippetForPreview(templateInput);
+            try {
+                katex.render(latexToRender || '\\text{Ukázka}', target, { throwOnError: false });
+            } catch (e) {
+                target.textContent = latexToRender;
+            }
+        }
+
+        function saveCustomSnippet() {
+            const label = document.getElementById('newSnippetLabel').value.trim();
+            const category = document.getElementById('newSnippetCategory').value;
+            const shortcut = document.getElementById('newSnippetShortcut').value.trim();
+            const preview = document.getElementById('newSnippetPreview').value.trim();
+            const template = document.getElementById('newSnippetTemplate').value.trim();
+
+            if (!label || !shortcut || !template) {
+                showToast('Vyplň prosím název, zkratku a šablonu vzorce.', 'warn');
+                return;
+            }
+
+            const newItem = {
+                id: 'custom_' + Date.now(),
+                category,
+                label,
+                shortcut,
+                preview: preview || cleanSnippetForPreview(template),
+                snippet: template,
+                isCustom: true
+            };
+
+            snippets.unshift(newItem);
+            saveSnippetsToStorage();
+            renderLibrary();
+            closeAddSnippetModal();
+            showToast(`Vzorec "${label}" byl přidán do tvé knihovny!`);
+        }
+
+        function deleteCustomSnippet(event, id) {
+            event.stopPropagation();
+            snippets = snippets.filter(s => s.id !== id);
+            saveSnippetsToStorage();
+            renderLibrary();
+            showToast('Vlastní vzorec byl odstraněn.');
+        }
+
+        function resetDefaultSnippets() {
+            snippets = [...DEFAULT_SNIPPETS];
+            saveSnippetsToStorage();
+            renderLibrary();
+            showToast('Výchozí knihovna vzorců byla obnovena.');
+        }
+
+        // ---------------------------------------------------------------------
+        // 9. COMMAND PALETTE (Alt + M)
+        // ---------------------------------------------------------------------
+        function openCommandPalette() {
+            const modal = document.getElementById('commandPaletteModal');
+            const input = document.getElementById('paletteSearchInput');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            input.value = '';
+            renderPaletteResults();
+            input.focus();
+        }
+
+        function closeCommandPalette() {
+            const modal = document.getElementById('commandPaletteModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function renderPaletteResults() {
+            const q = document.getElementById('paletteSearchInput').value.trim().toLowerCase();
+            const list = document.getElementById('paletteResultsList');
+
+            const matches = snippets.filter(s => 
+                !q || s.shortcut.toLowerCase().includes(q) || s.label.toLowerCase().includes(q)
+            ).slice(0, 8);
+
+            list.innerHTML = matches.map((item, idx) => `
+                <div onclick="selectFromPalette('${item.id}')" class="p-2.5 rounded-xl hover:bg-brand-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-between gap-3 transition ${idx === 0 ? 'bg-slate-50 dark:bg-slate-800/60' : ''}">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="px-2 py-1 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 font-mono text-xs font-bold">${escapeHtml(item.shortcut)}</span>
+                        <div class="truncate">
+                            <div class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">${escapeHtml(item.label)}</div>
+                            <div class="text-[10px] text-slate-400">${escapeHtml(item.category)}</div>
+                        </div>
+                    </div>
+                    <div id="pal_prev_${item.id}" class="text-sm shrink-0 px-2"></div>
+                </div>
+            `).join('');
+
+            matches.forEach(item => {
+                const el = document.getElementById(`pal_prev_${item.id}`);
+                if (el) {
+                    katex.render(item.preview || cleanSnippetForPreview(item.snippet), el, { throwOnError: false });
+                }
+            });
+
+            // Enter selects first result
+            document.getElementById('paletteSearchInput').onkeydown = (e) => {
+                if (e.key === 'Enter' && matches.length > 0) {
+                    e.preventDefault();
+                    selectFromPalette(matches[0].id);
+                }
+            };
+        }
+
+        function selectFromPalette(id) {
+            closeCommandPalette();
+            insertSnippetById(id);
+        }
+
+        // ---------------------------------------------------------------------
+        // 10. CLOUD SYNC & EXPORT / IMPORT HUB
+        // ---------------------------------------------------------------------
+        function openCloudModal() {
+            document.getElementById('cloudModal').classList.remove('hidden');
+            document.getElementById('cloudModal').classList.add('flex');
+        }
+
+        function closeCloudModal() {
+            document.getElementById('cloudModal').classList.add('hidden');
+            document.getElementById('cloudModal').classList.remove('flex');
+        }
+
+        function exportFullWorkspaceJSON() {
+            const payload = {
+                app: 'PhysMath Studio',
+                ExportedAt: new Date().toISOString(),
+                snippets,
+                scratchpad: document.getElementById('scratchpadEditor').value,
+                notebookTitle: document.getElementById('noteTitleInput').value,
+                notebookContent: document.getElementById('notebookEditor').value
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'physmath_cloud.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Záloha physmath_cloud.json byla stažena!');
+        }
+
+        function importFullWorkspaceJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data.snippets)) {
+                        snippets = data.snippets;
+                        saveSnippetsToStorage();
+                    }
+                    if (typeof data.scratchpad === 'string') {
+                        document.getElementById('scratchpadEditor').value = data.scratchpad;
+                        saveScratchpadState();
+                    }
+                    if (typeof data.notebookContent === 'string') {
+                        document.getElementById('notebookEditor').value = data.notebookContent;
+                        saveNotebookState();
+                    }
+                    renderLibrary();
+                    renderScratchpadPreview();
+                    renderNotebookPreview();
+                    closeCloudModal();
+                    showToast('Knihovna a poznámky byly úspěšně obnoveny ze souboru!');
+                } catch (err) {
+                    showToast('Chyba při čtení JSON souboru.', 'warn');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadFile(ext) {
+            const title = document.getElementById('noteTitleInput').value.trim() || 'poznamky';
+            const rawContent = document.getElementById('notebookEditor').value.replace(/[▢◊]/g, '');
+
+            let finalContent = rawContent;
+            if (ext === 'tex') {
+                finalContent = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[czech]{babel}
+\\usepackage{amsmath,amssymb,amsfonts}
+
+\\title{${title}}
+\\date{\\today}
+
+\\begin{document}
+\\maketitle
+
+${rawContent}
+
+\\end{document}`;
+            }
+
+            const blob = new Blob([finalContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title.toLowerCase().replace(/\s+/g, '_')}.${ext}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Soubor .${ext.toUpperCase()} byl vygenerován!`);
+        }
+
+        function triggerCloudSyncSimulation() {
+            const badge = document.getElementById('gdriveConnectionBadge');
+            const statusText = document.getElementById('lastSyncTimeText');
+            badge.textContent = 'Synchronizuji...';
+            badge.className = 'text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400';
+
+            setTimeout(() => {
+                saveSnippetsToStorage();
+                saveScratchpadState();
+                saveNotebookState();
+                const now = new Date().toLocaleTimeString('cs-CZ');
+                badge.textContent = 'Synchronizováno';
+                badge.className = 'text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold';
+                statusText.textContent = `Poslední synchronizace: dnes v ${now}`;
+                showToast('Data byla uložena a připravena pro Google Drive!');
+            }, 600);
+        }
+
+        // ---------------------------------------------------------------------
+        // 11. UI HELPERS (THEME, MOBILE SIDEBAR, TOASTS)
+        // ---------------------------------------------------------------------
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            html.classList.toggle('dark');
+            if (html.classList.contains('dark')) {
+                icon.className = 'ph ph-sun text-lg';
+            } else {
+                icon.className = 'ph ph-moon text-lg';
+            }
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('librarySidebar');
+            const backdrop = document.getElementById('mobileSidebarBackdrop');
+            const isHidden = sidebar.classList.contains('-translate-x-full');
+
+            if (isHidden) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bg = type === 'warn' ? 'bg-amber-600' : 'bg-slate-900 dark:bg-brand-600';
+            toast.className = `${bg} text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg border border-white/10 flex items-center gap-2 transition-all duration-300`;
+            toast.innerHTML = `<i class="ph ${type === 'warn' ? 'ph-warning-circle' : 'ph-check-circle'} text-base"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
