@@ -599,6 +599,85 @@
                         </div>
                     </div>
 
+                    <!-- NEW: Interactive Tangent Line Configuration -->
+                    <div class="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-800/50 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-amber-800 dark:text-amber-300">
+                                <input type="checkbox" id="graphShowTangent" checked onchange="drawGraph()" class="rounded text-amber-600 focus:ring-0">
+                                <span>Zobrazit tečnu v bodě kurzoru</span>
+                            </label>
+                            <select id="tangentTargetFn" onchange="drawGraph()" class="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/70 text-[11px] font-mono">
+                                <option value="0">f(x)</option>
+                                <option value="1">g(x)</option>
+                                <option value="2">h(x)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <div class="flex-1">
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400">Připnutý bod x₀ (nebo klikni do grafu)</label>
+                                <div class="flex items-center gap-1 mt-0.5">
+                                    <input type="text" id="tangentPinnedX" placeholder="Volný kurzor (nebo zadej x₀)" oninput="onPinnedXInput()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500">
+                                    <button onclick="clearPinnedTangent()" class="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-[11px] text-slate-600 dark:text-slate-300 shrink-0" title="Uvolnit připnutou tečnu">
+                                        Uvolnit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tangentEquationBox" class="text-[11px] font-mono bg-white/80 dark:bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40 text-slate-700 dark:text-slate-200 truncate">
+                            y = f(x₀) + f'(x₀)(x - x₀)
+                        </div>
+
+                        <button onclick="insertTangentLatex()" class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                            <i class="ph ph-function"></i>
+                            <span>Vložit rovnici tečny (LaTeX)</span>
+                        </button>
+                    </div>
+
+                    <!-- NEW: Definite Integral [a, b] & Area Shading -->
+                    <div class="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/25 border border-indigo-200/70 dark:border-indigo-800/50 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-indigo-800 dark:text-indigo-300">
+                                <input type="checkbox" id="graphShowIntegral" checked onchange="drawGraph()" class="rounded text-indigo-600 focus:ring-0">
+                                <span>Určitý integrál ∫ f(x) dx</span>
+                            </label>
+                            <select id="integralTargetFn" onchange="drawGraph()" class="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700/70 text-[11px] font-mono">
+                                <option value="0">f(x)</option>
+                                <option value="1">g(x)</option>
+                                <option value="2">h(x)</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400">Dolní mez <strong>a</strong> (např. 0, -pi)</label>
+                                <input type="text" id="integralBoundA" value="0" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 dark:text-slate-400">Horní mez <strong>b</strong> (např. pi, 5)</label>
+                                <input type="text" id="integralBoundB" value="pi" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <!-- Numerical Simpson's Rule Output -->
+                        <div id="integralResultBox" class="p-2 rounded-lg bg-white/90 dark:bg-slate-900/90 border border-indigo-200/60 dark:border-indigo-900/50 text-[11px] font-mono space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Hodnota ∫ f(x)dx:</span>
+                                <strong id="integralSignedValue" class="text-indigo-600 dark:text-indigo-400">0.0000</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Obsah plochy ∫ |f(x)|dx:</span>
+                                <strong id="integralAbsValue" class="text-emerald-600 dark:text-emerald-400">0.0000</strong>
+                            </div>
+                        </div>
+
+                        <button onclick="insertIntegralLatex()" class="w-full py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition">
+                            <i class="ph ph-sigma"></i>
+                            <span>Vložit výpočet integrálu (LaTeX)</span>
+                        </button>
+                    </div>
+
                     <div class="text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl leading-relaxed">
                         <strong>Podporované funkce:</strong> <code class="font-mono">sin, cos, tan, asin, exp, ln, log, sqrt, abs, pi, e</code> a mocniny pomocí <code class="font-mono">^</code> (např. <code class="font-mono">x^2</code>).
                     </div>
@@ -607,10 +686,10 @@
                 <!-- Right Panel: High-DPI Interactive Canvas & Action Buttons -->
                 <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[380px]">
                     
-                    <!-- Top Readout Bar (Coordinates + Numerical Derivative) -->
+                    <!-- Top Readout Bar (Coordinates + Numerical Derivative + Tangent) -->
                     <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center gap-3 text-xs font-mono" id="graphReadoutBar">
-                            <span class="text-slate-500 dark:text-slate-400"><i class="ph ph-crosshair text-brand-500 mr-1"></i>ajeď myší nad graf pro odečet hodnot a derivace f'(x)</span>
+                        <div class="flex items-center flex-wrap gap-2 text-xs font-mono" id="graphReadoutBar">
+                            <span class="text-slate-500 dark:text-slate-400"><i class="ph ph-crosshair text-brand-500 mr-1"></i>Najeď myší nad graf (kliknutím připneš tečnu v bodě x₀)</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="insertGraphIntoNotebook()" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
@@ -1097,6 +1176,9 @@
         let activeTabstops = []; // Array of { index: number, marker: string }
         let currentTabstopStep = 0;
         let graphHoverX = null; // Current X coordinate hovered on the function plotter
+        let graphPinnedX = null; // Pinned X0 coordinate for tangent line
+        let lastTangentData = null; // Stores { x0, y0, slope, intercept, fnName, fnExpr }
+        let lastIntegralData = null; // Stores { a, b, aRaw, bRaw, signedVal, absVal, fnName, fnExpr }
 
         const DEFAULT_SCRATCHPAD = `\\vec{F}_{\\text{výsl}} = \\sum_{i=1}^{n} \\vec{F}_i = m \\frac{\\mathrm{d}^2 \\vec{r}}{\\mathrm{d}t^2}`;
         const DEFAULT_NOTEBOOK = `# Mechanika a Elektřina – Přehled vzorců
@@ -1985,6 +2067,76 @@ ${rawContent}
             }
         }
 
+        /**
+         * Parses a scalar bound expression like "-pi", "2*pi", "pi/2", "e", "1.5" into a number
+         */
+        function parseScalarBound(boundStr) {
+            if (boundStr === null || boundStr === undefined) return NaN;
+            const fn = compileMathExpression(String(boundStr));
+            if (!fn) return parseFloat(boundStr);
+            const val = fn(0);
+            return typeof val === 'number' ? val : NaN;
+        }
+
+        /**
+         * Numerical Definite Integral on [a, b] using composite Simpson's 1/3 Rule
+         * Returns { signed, absolute, posArea, negArea }
+         */
+        function computeSimpsonIntegral(fn, a, b, n = 1000) {
+            if (!fn || isNaN(a) || isNaN(b)) return null;
+            if (a === b) return { signed: 0, absolute: 0, posArea: 0, negArea: 0 };
+
+            const signFlip = b < a ? -1 : 1;
+            const start = Math.min(a, b);
+            const end = Math.max(a, b);
+            const steps = n % 2 === 0 ? n : n + 1;
+            const h = (end - start) / steps;
+
+            let sumSigned = 0;
+            let sumAbs = 0;
+            let posArea = 0;
+            let negArea = 0;
+
+            for (let i = 0; i <= steps; i++) {
+                const x = start + i * h;
+                let y = fn(x);
+                if (!isFinite(y)) y = 0;
+
+                const weight = (i === 0 || i === steps) ? 1 : (i % 2 === 1 ? 4 : 2);
+                sumSigned += weight * y;
+                sumAbs += weight * Math.abs(y);
+                if (y >= 0) posArea += weight * y;
+                else negArea += weight * y;
+            }
+
+            const factor = h / 3;
+            return {
+                signed: signFlip * sumSigned * factor,
+                absolute: sumAbs * factor,
+                posArea: posArea * factor,
+                negArea: negArea * factor
+            };
+        }
+
+        function onPinnedXInput() {
+            const raw = document.getElementById('tangentPinnedX').value.trim();
+            if (!raw) {
+                graphPinnedX = null;
+            } else {
+                const parsed = parseScalarBound(raw);
+                graphPinnedX = isFinite(parsed) ? parsed : null;
+            }
+            drawGraph();
+        }
+
+        function clearPinnedTangent() {
+            graphPinnedX = null;
+            const input = document.getElementById('tangentPinnedX');
+            if (input) input.value = '';
+            drawGraph();
+            showToast('Tečna uvolněna – opět sleduje pohyb kurzoru.');
+        }
+
         function loadGraphPreset(presetName) {
             const titleEl = document.getElementById('graphTitleInput');
             const xLabelEl = document.getElementById('graphXLabel');
@@ -2009,6 +2161,8 @@ ${rawContent}
                 document.getElementById('fn3Active').checked = true;
                 document.getElementById('fn3Expr').value = '-exp(-0.25*x)';
                 document.getElementById('fn3Label').value = 'Dolní obálka -A(t)';
+                document.getElementById('integralBoundA').value = '0';
+                document.getElementById('integralBoundB').value = 'pi';
             } else if (presetName === 'projectile') {
                 titleEl.value = 'Balistická křivka – Šikmý vrh v tíhovém poli';
                 xLabelEl.value = 'x [m]';
@@ -2022,6 +2176,8 @@ ${rawContent}
                 document.getElementById('fn2Expr').value = 'x * tan(pi/3) - (9.81 / (2 * 14^2 * cos(pi/3)^2)) * x^2';
                 document.getElementById('fn2Label').value = 'Trajektorie pro α = 60°, v0 = 14 m/s';
                 document.getElementById('fn3Active').checked = false;
+                document.getElementById('integralBoundA').value = '0';
+                document.getElementById('integralBoundB').value = '19.98';
             } else if (presetName === 'harmonic') {
                 titleEl.value = 'Superpozice dvou blízkých frekvencí (Rázy / Zázněje)';
                 xLabelEl.value = 't [s]';
@@ -2035,6 +2191,8 @@ ${rawContent}
                 document.getElementById('fn2Expr').value = '2*cos(0.25*x)';
                 document.getElementById('fn2Label').value = 'Modulační obálka rázů';
                 document.getElementById('fn3Active').checked = false;
+                document.getElementById('integralBoundA').value = '0';
+                document.getElementById('integralBoundB').value = '2*pi';
             } else if (presetName === 'gauss') {
                 titleEl.value = 'Kvantový vlnový balík a hustota pravděpodobnosti';
                 xLabelEl.value = 'x [nm]';
@@ -2048,6 +2206,8 @@ ${rawContent}
                 document.getElementById('fn2Expr').value = 'exp(-x^2)';
                 document.getElementById('fn2Label').value = 'Hustota pravděpodobnosti |Ψ(x)|²';
                 document.getElementById('fn3Active').checked = false;
+                document.getElementById('integralBoundA').value = '-2';
+                document.getElementById('integralBoundB').value = '2';
             }
             drawGraph();
             showToast('Fyzikální předvolba vykreslena!');
@@ -2089,6 +2249,27 @@ ${rawContent}
             canvas.addEventListener('mouseleave', () => {
                 graphHoverX = null;
                 drawGraph();
+            });
+
+            // Click on canvas pins/unpins the tangent point x0
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const padLeft = 56, padRight = 24;
+                const plotW = rect.width - padLeft - padRight;
+
+                const xMin = parseFloat(document.getElementById('graphXMin').value) || -10;
+                const xMax = parseFloat(document.getElementById('graphXMax').value) || 10;
+
+                if (mouseX >= padLeft && mouseX <= rect.width - padRight) {
+                    const clickedX = xMin + ((mouseX - padLeft) / plotW) * (xMax - xMin);
+                    graphPinnedX = clickedX;
+                    const pinInput = document.getElementById('tangentPinnedX');
+                    if (pinInput) pinInput.value = clickedX.toFixed(4);
+                    document.getElementById('graphShowTangent').checked = true;
+                    drawGraph();
+                    showToast(`Tečna připnuta v bodě x₀ = ${clickedX.toFixed(3)}`);
+                }
             });
 
             // Mouse wheel zoom
@@ -2274,14 +2455,115 @@ ${rawContent}
             ctx.rect(padLeft, padTop, plotW, plotH);
             ctx.clip();
 
+            // Pre-compile active functions
+            configs.forEach((cfg) => {
+                if (cfg.active) {
+                    cfg.fn = compileMathExpression(cfg.expr);
+                }
+            });
+
+            // 4A. Definite Integral Shading & Simpson's Rule Calculation on [a, b]
+            const showIntegral = document.getElementById('graphShowIntegral') && document.getElementById('graphShowIntegral').checked;
+            const intTargetIdx = parseInt((document.getElementById('integralTargetFn') || {}).value || '0', 10);
+            const intCfg = configs[intTargetIdx] || configs[0];
+
+            if (showIntegral && intCfg && intCfg.active && intCfg.fn) {
+                const rawA = document.getElementById('integralBoundA').value.trim();
+                const rawB = document.getElementById('integralBoundB').value.trim();
+                const valA = parseScalarBound(rawA);
+                const valB = parseScalarBound(rawB);
+
+                if (isFinite(valA) && isFinite(valB)) {
+                    const intResult = computeSimpsonIntegral(intCfg.fn, valA, valB, 1000);
+                    if (intResult) {
+                        lastIntegralData = {
+                            a: valA,
+                            b: valB,
+                            aRaw: rawA,
+                            bRaw: rawB,
+                            signedVal: intResult.signed,
+                            absVal: intResult.absolute,
+                            fnName: intCfg.name,
+                            fnExpr: intCfg.expr
+                        };
+                        const signedEl = document.getElementById('integralSignedValue');
+                        const absEl = document.getElementById('integralAbsValue');
+                        if (signedEl) signedEl.textContent = intResult.signed.toFixed(5);
+                        if (absEl) absEl.textContent = intResult.absolute.toFixed(5);
+
+                        // Shade positive area (above y=0) and negative area (below y=0)
+                        const startX = Math.max(xMin, Math.min(valA, valB));
+                        const endX = Math.min(xMax, Math.max(valA, valB));
+
+                        if (endX > startX) {
+                            const zeroY = toPxY(0);
+                            const shadeSteps = 450;
+                            const dx = (endX - startX) / shadeSteps;
+
+                            // Positive lobes (Indigo/Emerald tint)
+                            ctx.fillStyle = isDark ? 'rgba(99, 102, 241, 0.28)' : 'rgba(99, 102, 241, 0.22)';
+                            ctx.beginPath();
+                            ctx.moveTo(toPxX(startX), zeroY);
+                            for (let i = 0; i <= shadeSteps; i++) {
+                                const x = startX + i * dx;
+                                const y = intCfg.fn(x);
+                                const clampedY = (isFinite(y) && y > 0) ? y : 0;
+                                ctx.lineTo(toPxX(x), toPxY(clampedY));
+                            }
+                            ctx.lineTo(toPxX(endX), zeroY);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            // Negative lobes (Rose/Amber tint)
+                            ctx.fillStyle = isDark ? 'rgba(244, 63, 94, 0.28)' : 'rgba(244, 63, 94, 0.20)';
+                            ctx.beginPath();
+                            ctx.moveTo(toPxX(startX), zeroY);
+                            for (let i = 0; i <= shadeSteps; i++) {
+                                const x = startX + i * dx;
+                                const y = intCfg.fn(x);
+                                const clampedY = (isFinite(y) && y < 0) ? y : 0;
+                                ctx.lineTo(toPxX(x), toPxY(clampedY));
+                            }
+                            ctx.lineTo(toPxX(endX), zeroY);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+
+                        // Draw vertical bound markers at x = a and x = b
+                        [
+                            { val: valA, label: `a = ${rawA}` },
+                            { val: valB, label: `b = ${rawB}` }
+                        ].forEach(bound => {
+                            if (bound.val >= xMin && bound.val <= xMax) {
+                                const bx = toPxX(bound.val);
+                                const by = toPxY(intCfg.fn(bound.val));
+                                const zy = toPxY(0);
+                                ctx.strokeStyle = isDark ? 'rgba(129, 140, 248, 0.85)' : 'rgba(79, 70, 229, 0.85)';
+                                ctx.lineWidth = 1.5;
+                                ctx.setLineDash([3, 3]);
+                                ctx.beginPath();
+                                ctx.moveTo(bx, zy);
+                                if (isFinite(by)) ctx.lineTo(bx, by);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+
+                                ctx.fillStyle = isDark ? '#a5b4fc' : '#4338ca';
+                                ctx.font = 'bold 10px "JetBrains Mono", monospace';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(bound.label, bx, padTop + 12);
+                            }
+                        });
+                    }
+                }
+            }
+
+            // 4B. Plot Function Curves
             const samples = Math.min(1200, plotW * 2);
             const rootsFound = [];
 
             configs.forEach((cfg, idx) => {
-                if (!cfg.active) return;
-                const fn = compileMathExpression(cfg.expr);
-                if (!fn) return;
-                cfg.fn = fn;
+                if (!cfg.active || !cfg.fn) return;
+                const fn = cfg.fn;
 
                 ctx.strokeStyle = cfg.color;
                 ctx.lineWidth = idx === 0 ? 2.5 : 2;
@@ -2336,10 +2618,65 @@ ${rawContent}
                 });
             }
 
-            // 6. Interactive Hover Crosshair & Tangent Readout
+            // 6. Interactive Tangent Line at x0 (either Pinned x0 or Live Cursor Hover)
+            const showTangent = document.getElementById('graphShowTangent') && document.getElementById('graphShowTangent').checked;
+            const tanTargetIdx = parseInt((document.getElementById('tangentTargetFn') || {}).value || '0', 10);
+            const tanCfg = configs[tanTargetIdx] || configs[0];
+            const activeX0 = graphPinnedX !== null ? graphPinnedX : graphHoverX;
+
+            if (showTangent && activeX0 !== null && tanCfg && tanCfg.active && tanCfg.fn) {
+                const y0 = tanCfg.fn(activeX0);
+                const hStep = 1e-5;
+                const slope = (tanCfg.fn(activeX0 + hStep) - tanCfg.fn(activeX0 - hStep)) / (2 * hStep);
+
+                if (isFinite(y0) && isFinite(slope)) {
+                    const intercept = y0 - slope * activeX0;
+                    lastTangentData = {
+                        x0: activeX0,
+                        y0,
+                        slope,
+                        intercept,
+                        fnName: tanCfg.name,
+                        fnExpr: tanCfg.expr
+                    };
+
+                    // Draw full-span tangent line y = y0 + slope * (x - x0) across [xMin, xMax]
+                    const yAtMin = y0 + slope * (xMin - activeX0);
+                    const yAtMax = y0 + slope * (xMax - activeX0);
+
+                    ctx.strokeStyle = '#f59e0b'; // Amber tangent line
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([6, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(toPxX(xMin), toPxY(yAtMin));
+                    ctx.lineTo(toPxX(xMax), toPxY(yAtMax));
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Highlight point of tangency [x0, f(x0)]
+                    const px0 = toPxX(activeX0);
+                    const py0 = toPxY(y0);
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(px0, py0, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = bgColor;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Update tangent equation box in left sidebar
+                    const signChar = intercept >= 0 ? '+' : '-';
+                    const eqText = `y = ${slope.toFixed(3)}x ${signChar} ${Math.abs(intercept).toFixed(3)}  (x₀=${activeX0.toFixed(2)})`;
+                    const eqBox = document.getElementById('tangentEquationBox');
+                    if (eqBox) eqBox.textContent = eqText;
+                }
+            }
+
+            // 7. Interactive Hover Crosshair & Tangent Readout
             const readoutEl = document.getElementById('graphReadoutBar');
-            if (graphHoverX !== null && !forceLightBackground) {
-                const hx = toPxX(graphHoverX);
+            const readoutX = graphHoverX !== null ? graphHoverX : graphPinnedX;
+            if (readoutX !== null && !forceLightBackground) {
+                const hx = toPxX(readoutX);
                 ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.25)';
                 ctx.setLineDash([4, 4]);
                 ctx.lineWidth = 1;
@@ -2349,11 +2686,11 @@ ${rawContent}
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                let htmlBadges = `<span class="font-bold text-slate-700 dark:text-slate-200">x = ${graphHoverX.toFixed(3)}</span>`;
+                let htmlBadges = `<span class="font-bold text-slate-700 dark:text-slate-200">${graphPinnedX !== null && graphHoverX === null ? '📌 x₀' : 'x'} = ${readoutX.toFixed(3)}</span>`;
 
                 configs.forEach(cfg => {
                     if (cfg.active && cfg.fn) {
-                        const yVal = cfg.fn(graphHoverX);
+                        const yVal = cfg.fn(readoutX);
                         if (isFinite(yVal)) {
                             const py = toPxY(yVal);
                             ctx.fillStyle = cfg.color;
@@ -2363,11 +2700,17 @@ ${rawContent}
 
                             // Numerical derivative f'(x)
                             const h = 1e-5;
-                            const deriv = (cfg.fn(graphHoverX + h) - cfg.fn(graphHoverX - h)) / (2 * h);
-                            htmlBadges += `<span class="px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800" style="color:${cfg.color}">${cfg.name}(x) = ${yVal.toFixed(3)} <span class="opacity-75">(${cfg.name}' = ${deriv.toFixed(2)})</span></span>`;
+                            const deriv = (cfg.fn(readoutX + h) - cfg.fn(readoutX - h)) / (2 * h);
+                            htmlBadges += `<span class="px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800" style="color:${cfg.color}">${cfg.name}(x) = ${yVal.toFixed(3)} <span class="opacity-75">(${cfg.name}' = ${deriv.toFixed(3)})</span></span>`;
                         }
                     }
                 });
+
+                if (lastTangentData && showTangent) {
+                    const signStr = lastTangentData.intercept >= 0 ? '+' : '-';
+                    htmlBadges += `<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 font-semibold">Tečna: y = ${lastTangentData.slope.toFixed(2)}x ${signStr} ${Math.abs(lastTangentData.intercept).toFixed(2)}</span>`;
+                }
+
                 readoutEl.innerHTML = htmlBadges;
             }
 
@@ -2397,7 +2740,7 @@ ${rawContent}
         function getHighResLightGraphDataURL() {
             const prevHover = graphHoverX;
             graphHoverX = null;
-            drawGraph(true); // Render with crisp white academic background for notes & PDF
+            drawGraph(true); // Render with crisp white academic background for notes & PDF (keeps integral shading & pinned tangent)
             const canvas = document.getElementById('functionGraphCanvas');
             const dataUrl = canvas.toDataURL('image/png');
             graphHoverX = prevHover;
@@ -2405,18 +2748,74 @@ ${rawContent}
             return dataUrl;
         }
 
+        function insertTangentLatex() {
+            if (!lastTangentData) {
+                showToast('Nejprve najeď myší nad graf nebo kliknutím připni bod x₀.', 'warn');
+                return;
+            }
+            const { x0, y0, slope, intercept, fnName } = lastTangentData;
+            const sign = intercept >= 0 ? '+' : '-';
+            const latexBlock = `t(x) = ${fnName}(x_0) + ${fnName}'(x_0)(x - x_0) = ${y0.toFixed(3)} + ${slope.toFixed(3)}\\cdot(x - ${x0.toFixed(3)}) = ${slope.toFixed(3)}x ${sign} ${Math.abs(intercept).toFixed(3)}`;
+
+            const scratchEl = document.getElementById('scratchpadEditor');
+            scratchEl.value = latexBlock;
+            saveScratchpadState();
+            renderScratchpadPreview();
+
+            const noteEl = document.getElementById('notebookEditor');
+            noteEl.value += `\n\n**Rovnice tečny k funkci $${fnName}(x)$ v bodě $x_0 = ${x0.toFixed(3)}$:**\n$$\n${latexBlock}\n$$\n`;
+            saveNotebookState();
+            renderNotebookPreview();
+
+            showToast('Rovnice tečny v LaTeXu byla vložena do Zápisníku i Rychlého vzorce!');
+        }
+
+        function insertIntegralLatex() {
+            if (!lastIntegralData) {
+                showToast('Zkontroluj prosím meze integrálu a zadanou funkci.', 'warn');
+                return;
+            }
+            const { aRaw, bRaw, signedVal, absVal, fnExpr } = lastIntegralData;
+            const cleanA = aRaw.replace(/pi/gi, '\\pi');
+            const cleanB = bRaw.replace(/pi/gi, '\\pi');
+            const cleanExpr = fnExpr.replace(/\*/g, ' \\cdot ').replace(/pi/gi, '\\pi');
+
+            const latexBlock = `I = \\int_{${cleanA}}^{${cleanB}} \\left( ${cleanExpr} \\right) \\,\\mathrm{d}x \\approx ${signedVal.toFixed(5)}, \\quad S = \\int_{${cleanA}}^{${cleanB}} \\left| ${cleanExpr} \\right| \\,\\mathrm{d}x \\approx ${absVal.toFixed(5)}`;
+
+            const scratchEl = document.getElementById('scratchpadEditor');
+            scratchEl.value = latexBlock;
+            saveScratchpadState();
+            renderScratchpadPreview();
+
+            const noteEl = document.getElementById('notebookEditor');
+            noteEl.value += `\n\n**Numerický výpočet určitého integrálu (Simpsonovo pravidlo):**\n$$\n${latexBlock}\n$$\n`;
+            saveNotebookState();
+            renderNotebookPreview();
+
+            showToast('Výpočet určitého integrálu v LaTeXu byl vložen do Zápisníku i Rychlého vzorce!');
+        }
+
         function insertGraphIntoNotebook() {
             const dataUrl = getHighResLightGraphDataURL();
             const title = document.getElementById('graphTitleInput').value.trim() || 'Graf funkce';
             const fn1 = document.getElementById('fn1Expr').value.trim();
 
-            const markdownBlock = `\n\n### Graf: ${title}\n![${title}](${dataUrl})\n*Funkce: \`f(x) = ${fn1}\`*\n`;
+            let extraDetails = `*Funkce: \`f(x) = ${fn1}\`*`;
+            if (document.getElementById('graphShowIntegral')?.checked && lastIntegralData) {
+                extraDetails += ` | $\\int_{${lastIntegralData.aRaw}}^{${lastIntegralData.bRaw}} f(x)\\,\\mathrm{d}x \\approx ${lastIntegralData.signedVal.toFixed(4)}$`;
+            }
+            if (document.getElementById('graphShowTangent')?.checked && lastTangentData && graphPinnedX !== null) {
+                const s = lastTangentData.intercept >= 0 ? '+' : '-';
+                extraDetails += ` | Tečna v $x_0=${lastTangentData.x0.toFixed(2)}$: $y = ${lastTangentData.slope.toFixed(2)}x ${s} ${Math.abs(lastTangentData.intercept).toFixed(2)}$`;
+            }
+
+            const markdownBlock = `\n\n### Graf: ${title}\n![${title}](${dataUrl})\n${extraDetails}\n`;
             const notebookEl = document.getElementById('notebookEditor');
             notebookEl.value += markdownBlock;
             saveNotebookState();
             renderNotebookPreview();
             switchWorkspaceMode('notebook');
-            showToast('Graf byl vložen do Zápisníku a je připraven i pro PDF export!');
+            showToast('Graf včetně integrálu a tečny byl vložen do Zápisníku!');
         }
 
         function downloadGraphPNG() {
@@ -2499,7 +2898,6 @@ ${rawContent}
                 icon.className = 'ph ph-moon text-lg';
             }
             if (currentMode === 'grapher') drawGraph();
-        }
         }
 
         function toggleMobileSidebar() {
