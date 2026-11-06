@@ -40,6 +40,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
+    <!-- Marked.js for full Markdown rendering (tables, lists, images, headings) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
@@ -76,9 +79,59 @@
         .tabstop-active-bar {
             animation: subtlePulse 2s infinite ease-in-out;
         }
+
+        /* Rich Markdown Preview Styling */
+        .notebook-rendered h1 { font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem; margin-bottom: 0.75rem; line-height: 1.25; }
+        .notebook-rendered h2 { font-size: 1.2rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(148, 163, 184, 0.25); }
+        .notebook-rendered h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.35rem; }
+        .notebook-rendered p { margin: 0.6rem 0; line-height: 1.65; }
+        .notebook-rendered ul { list-style-type: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+        .notebook-rendered ol { list-style-type: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+        .notebook-rendered blockquote { border-left: 3px solid #6366f1; padding-left: 0.85rem; opacity: 0.85; font-style: italic; margin: 0.75rem 0; }
+        .notebook-rendered img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.85rem auto; display: block; border: 1px solid rgba(148, 163, 184, 0.25); background: #ffffff; padding: 0.35rem; }
+        .notebook-rendered table { width: 100%; border-collapse: collapse; margin: 0.85rem 0; font-size: 0.875rem; }
+        .notebook-rendered th, .notebook-rendered td { border: 1px solid rgba(148, 163, 184, 0.3); padding: 0.45rem 0.65rem; text-align: left; }
+        .notebook-rendered th { background: rgba(99, 102, 241, 0.08); font-weight: 600; }
+
+        /* Clean Vector PDF Print Styling (@media print) */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            header, aside, #quickModifierRibbon, #workspaceScratchpad, #workspaceGrapher, #workspaceNotebook,
+            #commandPaletteModal, #addSnippetModal, #cloudModal, #pdfExportModal, #toastContainer, #mobileSidebarBackdrop {
+                display: none !important;
+            }
+            #printDocumentContainer {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+            #printDocumentContainer .katex-display,
+            #printDocumentContainer img,
+            #printDocumentContainer table,
+            #printDocumentContainer blockquote {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            #printDocumentContainer h1, #printDocumentContainer h2, #printDocumentContainer h3 {
+                break-after: avoid;
+                page-break-after: avoid;
+                color: #0f172a !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none sm:select-auto transition-colors duration-200">
+
+    <!-- DEDICATED PRINT-ONLY ACADEMIC DOCUMENT VIEW (For Razor-Sharp Vector PDF Export) -->
+    <div id="printDocumentContainer" class="hidden"></div>
 
     <!-- TOP NAVIGATION BAR -->
     <header class="h-14 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 sm:px-5 flex items-center justify-between shrink-0 z-20">
@@ -94,38 +147,48 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">PhysMath Studio</h1>
-                        <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 dark:text-brand-400 border border-brand-500/20 font-semibold">Cloud PWA</span>
+                        <span class="hidden xl:inline-block text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 dark:text-brand-400 border border-brand-500/20 font-semibold">Cloud PWA</span>
                     </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Chytrá knihovna vzorců s indexy a živým KaTeX náhledem</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden xl:block">Knihovna vzorců, grafy funkcí a čistý PDF export</p>
                 </div>
             </div>
         </div>
 
-        <!-- Center: Mode Switcher -->
+        <!-- Center: 3-Mode Workspace Switcher -->
         <div class="flex items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700/70">
-            <button id="modeScratchpadBtn" onclick="switchWorkspaceMode('scratchpad')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm">
+            <button id="modeScratchpadBtn" onclick="switchWorkspaceMode('scratchpad')" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm">
                 <i class="ph ph-function text-base"></i>
-                <span>Rychlý vzorec</span>
+                <span class="hidden sm:inline">Rychlý vzorec</span>
             </button>
-            <button id="modeNotebookBtn" onclick="switchWorkspaceMode('notebook')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            <button id="modeNotebookBtn" onclick="switchWorkspaceMode('notebook')" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <i class="ph ph-notebook text-base"></i>
                 <span>Zápisník <span class="hidden md:inline">(MD + LaTeX)</span></span>
             </button>
+            <button id="modeGrapherBtn" onclick="switchWorkspaceMode('grapher')" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="ph ph-chart-line-up text-base"></i>
+                <span>Grafy funkcí</span>
+            </button>
         </div>
 
-        <!-- Right: Quick Palette, Cloud Sync & Theme -->
+        <!-- Right: PDF Export, Quick Palette, Cloud Sync & Theme -->
         <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Direct Clean PDF Export Button -->
+            <button onclick="openPdfExportModal()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-semibold transition" title="Exportovat celý zápisník do čistého PDF dokumentu">
+                <i class="ph ph-file-pdf text-base"></i>
+                <span class="hidden sm:inline">Export do PDF</span>
+            </button>
+
             <!-- Quick Command Palette Button -->
             <button onclick="openCommandPalette()" class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition" title="Rychlé vložení zkratkou (Alt + M)">
                 <i class="ph ph-magnifying-glass text-sm text-brand-500"></i>
-                <span class="hidden xl:inline">Rychle vložit...</span>
-                <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700">Alt+M</kbd>
+                <span class="hidden 2xl:inline">Vložit...</span>
+                <kbd class="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700">Alt+M</kbd>
             </button>
 
             <!-- Google Drive / Cloud Sync Hub -->
             <button onclick="openCloudModal()" id="cloudSyncBtn" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium transition">
                 <i class="ph ph-cloud-check text-base" id="cloudStatusIcon"></i>
-                <span class="hidden md:inline" id="cloudStatusText">Google Drive & Záloha</span>
+                <span class="hidden lg:inline" id="cloudStatusText">Google Drive</span>
             </button>
 
             <!-- Theme Toggle -->
@@ -198,7 +261,7 @@
         <main class="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
 
             <!-- QUICK MODIFIER RIBBON (Top of Editor) -->
-            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div id="quickModifierRibbon" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5">
                     <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline">Rychlé modifikátory:</span>
                     
@@ -376,14 +439,21 @@
                             <button onclick="jumpToNextTabstop()" class="px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium flex items-center gap-1">
                                 <i class="ph ph-key-return"></i> Další index (Tab)
                             </button>
+                            <button onclick="switchWorkspaceMode('grapher')" class="px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1 transition">
+                                <i class="ph ph-chart-line-up"></i> + Vykreslit graf
+                            </button>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <button onclick="openPdfExportModal()" class="text-rose-600 dark:text-rose-400 font-semibold hover:underline flex items-center gap-1">
+                                <i class="ph ph-file-pdf"></i> PDF
+                            </button>
+                            <span class="text-slate-300 dark:text-slate-700">|</span>
                             <button onclick="downloadFile('md')" class="text-slate-600 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1">
-                                <i class="ph ph-download-simple"></i> Stáhnout .MD
+                                <i class="ph ph-download-simple"></i> .MD
                             </button>
                             <span class="text-slate-300 dark:text-slate-700">|</span>
                             <button onclick="downloadFile('tex')" class="text-slate-600 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1">
-                                <i class="ph ph-file-text"></i> Export .TEX
+                                <i class="ph ph-file-text"></i> .TEX
                             </button>
                         </div>
                     </div>
@@ -396,16 +466,242 @@
                             <i class="ph ph-eye text-emerald-500"></i>
                             <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Vysázený dokument</h3>
                         </div>
-                        <span class="text-[11px] text-slate-400">Automatická sazba KaTeX + Markdown</span>
+                        <button onclick="openPdfExportModal()" class="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1">
+                            <i class="ph ph-printer"></i> Tisk / Čisté PDF
+                        </button>
                     </div>
-                    <div id="notebookPreview" class="flex-1 p-6 overflow-y-auto prose dark:prose-invert max-w-none space-y-3 text-sm sm:text-base leading-relaxed">
+                    <div id="notebookPreview" class="notebook-rendered flex-1 p-6 overflow-y-auto max-w-none text-sm sm:text-base leading-relaxed">
                         <!-- Rendered via JS -->
                     </div>
                 </div>
 
             </section>
 
+            <!-- ===================================================================== -->
+            <!-- MODE 3: INTERACTIVE FUNCTION GRAPHER (GRAFY FUNKCÍ) -->
+            <!-- ===================================================================== -->
+            <section id="workspaceGrapher" class="hidden flex-1 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-4 sm:p-6 gap-5">
+                
+                <!-- Left Panel: Function Inputs, Presets & Axis Bounds -->
+                <div class="w-full lg:w-96 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-y-auto shrink-0 p-4 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-chart-line-up text-brand-500 text-lg"></i>
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Zadání funkcí a parametrů</h3>
+                        </div>
+                        <button onclick="resetGraphZoom()" class="text-xs text-brand-500 hover:underline flex items-center gap-1">
+                            <i class="ph ph-arrows-out-cardinal"></i> Выchozí osy
+                        </button>
+                    </div>
+
+                    <!-- Physics & Math Presets -->
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Fyzikální a matematické předvolby:</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="loadGraphPreset('damped')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 text-xs font-medium text-left transition flex items-center gap-1.5 border border-transparent hover:border-brand-500/30">
+                                <i class="ph ph-wave-sine text-brand-500"></i> Tlumené kmitání
+                            </button>
+                            <button onclick="loadGraphPreset('projectile')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 text-xs font-medium text-left transition flex items-center gap-1.5 border border-transparent hover:border-brand-500/30">
+                                <i class="ph ph-trend-up text-emerald-500"></i> Šikmý vrh
+                            </button>
+                            <button onclick="loadGraphPreset('harmonic')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 text-xs font-medium text-left transition flex items-center gap-1.5 border border-transparent hover:border-brand-500/30">
+                                <i class="ph ph-activity text-amber-500"></i> Skládání kmitů (Rázy)
+                            </button>
+                            <button onclick="loadGraphPreset('gauss')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/50 hover:text-brand-600 dark:hover:text-brand-400 text-xs font-medium text-left transition flex items-center gap-1.5 border border-transparent hover:border-brand-500/30">
+                                <i class="ph ph-bell-simple text-rose-500"></i> Gaussův vlnový balík
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3 Function Input Rows -->
+                    <div class="space-y-2.5">
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Předpisy funkcí (proměnná <code class="text-brand-500">x</code>):</label>
+                        
+                        <!-- f(x) -->
+                        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="fn1Active" checked onchange="drawGraph()" class="rounded text-indigo-600 focus:ring-0">
+                                <span class="w-3 h-3 rounded-full bg-indigo-500 shrink-0"></span>
+                                <span class="font-serif italic font-bold text-xs text-indigo-600 dark:text-indigo-400">f(x) =</span>
+                                <input type="text" id="fn1Expr" value="exp(-0.25*x) * cos(2*x)" oninput="drawGraph()" placeholder="např. sin(x) nebo x^2 - 4" class="flex-1 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg font-mono text-xs border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <input type="text" id="fn1Label" value="Tlumená výchylka y(t)" oninput="drawGraph()" placeholder="Popisek v legendě (volitelné)" class="w-full bg-transparent px-1 text-[11px] text-slate-500 dark:text-slate-400 focus:outline-none">
+                        </div>
+
+                        <!-- g(x) -->
+                        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="fn2Active" checked onchange="drawGraph()" class="rounded text-emerald-600 focus:ring-0">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span class="font-serif italic font-bold text-xs text-emerald-600 dark:text-emerald-400">g(x) =</span>
+                                <input type="text" id="fn2Expr" value="exp(-0.25*x)" oninput="drawGraph()" placeholder="např. cos(x)" class="flex-1 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg font-mono text-xs border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <input type="text" id="fn2Label" value="Obálka amplitudy +A(t)" oninput="drawGraph()" placeholder="Popisek v legendě (volitelné)" class="w-full bg-transparent px-1 text-[11px] text-slate-500 dark:text-slate-400 focus:outline-none">
+                        </div>
+
+                        <!-- h(x) -->
+                        <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="fn3Active" checked onchange="drawGraph()" class="rounded text-rose-600 focus:ring-0">
+                                <span class="w-3 h-3 rounded-full bg-rose-500 shrink-0"></span>
+                                <span class="font-serif italic font-bold text-xs text-rose-600 dark:text-rose-400">h(x) =</span>
+                                <input type="text" id="fn3Expr" value="-exp(-0.25*x)" oninput="drawGraph()" placeholder="např. -exp(-0.25*x)" class="flex-1 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg font-mono text-xs border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-rose-500">
+                            </div>
+                            <input type="text" id="fn3Label" value="Obálka amplitudy -A(t)" oninput="drawGraph()" placeholder="Popisek v legendě (volitelné)" class="w-full bg-transparent px-1 text-[11px] text-slate-500 dark:text-slate-400 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Axis Range & Title Configuration -->
+                    <div class="space-y-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-400 mb-1">Nadpis grafu a popisky os</label>
+                            <input type="text" id="graphTitleInput" value="Časový průběh tlumeného harmonického kmitání" oninput="drawGraph()" class="w-full px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-400">Osa X popisek</label>
+                                <input type="text" id="graphXLabel" value="t [s]" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400">Osa Y popisek</label>
+                                <input type="text" id="graphYLabel" value="y [m]" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <div>
+                                <label class="block text-[10px] text-slate-400">x<sub>min</sub></label>
+                                <input type="number" id="graphXMin" value="0" step="1" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400">x<sub>max</sub></label>
+                                <input type="number" id="graphXMax" value="15" step="1" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400">y<sub>min</sub></label>
+                                <input type="number" id="graphYMin" value="-1.2" step="0.5" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-400">y<sub>max</sub></label>
+                                <input type="number" id="graphYMax" value="1.2" step="0.5" oninput="drawGraph()" class="w-full px-2 py-1 rounded-lg text-xs font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 text-xs">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="graphShowGrid" checked onchange="drawGraph()" class="rounded text-brand-600">
+                                <span>Zobrazit mřížku</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" id="graphShowRoots" checked onchange="drawGraph()" class="rounded text-brand-600">
+                                <span>Zvýraznit průsečíky f(x)=0</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl leading-relaxed">
+                        <strong>Podporované funkce:</strong> <code class="font-mono">sin, cos, tan, asin, exp, ln, log, sqrt, abs, pi, e</code> a mocniny pomocí <code class="font-mono">^</code> (např. <code class="font-mono">x^2</code>).
+                    </div>
+                </div>
+
+                <!-- Right Panel: High-DPI Interactive Canvas & Action Buttons -->
+                <div class="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[380px]">
+                    
+                    <!-- Top Readout Bar (Coordinates + Numerical Derivative) -->
+                    <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-3 text-xs font-mono" id="graphReadoutBar">
+                            <span class="text-slate-500 dark:text-slate-400"><i class="ph ph-crosshair text-brand-500 mr-1"></i>ajeď myší nad graf pro odečet hodnot a derivace f'(x)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="insertGraphIntoNotebook()" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                                <i class="ph ph-notebook text-sm"></i>
+                                <span>Vložit graf do zápisníku</span>
+                            </button>
+                            <button onclick="downloadGraphPNG()" class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition">
+                                <i class="ph ph-download-simple text-sm"></i>
+                                <span>Stáhnout PNG</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Canvas Container -->
+                    <div id="graphCanvasWrapper" class="flex-1 relative w-full h-full min-h-[300px] bg-white dark:bg-slate-950 overflow-hidden">
+                        <canvas id="functionGraphCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                    </div>
+
+                    <!-- Bottom Root / Extrema Analysis Bar -->
+                    <div id="graphAnalysisFooter" class="px-4 py-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 text-xs text-slate-600 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2">
+                        <span id="graphRootsSummary">Analýza f(x): připraveno</span>
+                        <span class="text-[11px] text-slate-400">Tip: Kolečkem myši nad grafem přiblížíš/oddálíš osy</span>
+                    </div>
+                </div>
+
+            </section>
+
         </main>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 4: CLEAN VECTOR PDF EXPORT CONFIGURATION -->
+    <!-- ===================================================================== -->
+    <div id="pdfExportModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                        <i class="ph ph-file-pdf text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">Export zápisníku do čistého PDF</h3>
+                        <p class="text-xs text-slate-400">Ostrá vektorová sazba vzorců KaTeX a vložených grafů</p>
+                    </div>
+                </div>
+                <button onclick="closePdfExportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 text-xs sm:text-sm">
+                <div>
+                    <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Název dokumentu / protokolu v hlavičce PDF</label>
+                    <input id="pdfDocTitle" type="text" class="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Autor / Předmět (volitelné)</label>
+                        <input id="pdfDocAuthor" type="text" placeholder="např. Fyzikální praktikum I" class="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700 dark:text-slate-300">Styl písma dokumentu</label>
+                        <select id="pdfFontStyle" class="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-brand-500">
+                            <option value="serif">Akademické patkové (LaTeX styl)</option>
+                            <option value="sans">Moderní bezpatkové (Inter)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="pdfIncludeHeader" checked class="rounded text-brand-600">
+                        <span>Zobrazit akademickou hlavičku s datem</span>
+                    </label>
+                </div>
+
+                <div class="p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    <i class="ph ph-sparkle text-rose-500 mr-1"></i>
+                    <strong>Proč tisk přes systémový PDF engine:</strong> Na rozdíl od rastrování obrazovky zachová tento režim všechny matematické symboly a indexy jako <strong>100% vektorové křivky</strong> (můžeš v PDF libovolně přibližovat i kopírovat text). V okně tisku vyber cíl <strong>„Uložit jako PDF“</strong>.
+                </div>
+            </div>
+
+            <div class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
+                <button onclick="closePdfExportModal()" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300">Zrušit</button>
+                <button onclick="triggerCleanPdfPrint()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-sm">
+                    <i class="ph ph-printer text-sm"></i>
+                    <span>Vygenerovat a uložit PDF</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ===================================================================== -->
@@ -797,9 +1093,10 @@
         // ---------------------------------------------------------------------
         let snippets = [];
         let activeCategory = 'Vše';
-        let currentMode = 'scratchpad'; // 'scratchpad' | 'notebook'
+        let currentMode = 'scratchpad'; // 'scratchpad' | 'notebook' | 'grapher'
         let activeTabstops = []; // Array of { index: number, marker: string }
         let currentTabstopStep = 0;
+        let graphHoverX = null; // Current X coordinate hovered on the function plotter
 
         const DEFAULT_SCRATCHPAD = `\\vec{F}_{\\text{výsl}} = \\sum_{i=1}^{n} \\vec{F}_i = m \\frac{\\mathrm{d}^2 \\vec{r}}{\\mathrm{d}t^2}`;
         const DEFAULT_NOTEBOOK = `# Mechanika a Elektřina – Přehled vzorců
@@ -813,14 +1110,14 @@ $$
 E = E_{\\text{k}} + E_{\\text{p}} = \\frac{1}{2} m v^2 + \\int_{\\vec{r}_0}^{\\vec{r}} \\vec{F}_{\\text{konz}} \\cdot \\mathrm{d}\\vec{r} = \\text{konst.}
 $$
 
-## 2. Maxwellovy rovnice v diferenciálním tvaru
-Vztah mezi rotací elektrické intenzity $\\vec{E}$ a časovou změnou magnetické indukce $\\vec{B}$:
+## 2. Tlumené harmonické kmitání
+Okamžitá výchylka tlumeného oscilátoru s koeficientem útlumu $\\delta$ a úhlovou frekvencí $\\omega$:
 
 $$
-\\nabla \\times \\vec{E} = -\\frac{\\partial \\vec{B}}{\\partial t}
+y(t) = A_0 \\,\\mathrm{e}^{-\\delta t} \\cos(\\omega t + \\varphi_0)
 $$
 
-*Tip: Klikni kamkoliv do textu vlevo a vyber vzorec z levé knihovny nebo stiskni **Alt + M**!*`;
+*Tip: Přepni nahoře na záložku **Grafy funkcí**, vykresli si průběh kmitání a jedním klikem vlož graf přímo sem do zápisníku nebo vyexportuj čisté **PDF**!*`;
 
         // ---------------------------------------------------------------------
         // 3. INITIALIZATION
@@ -858,10 +1155,12 @@ $$
                     closeCommandPalette();
                     closeAddSnippetModal();
                     closeCloudModal();
+                    closePdfExportModal();
                     clearActiveTabstops();
                 }
             });
 
+            setupGraphCanvasInteractions();
             renderScratchpadPreview();
             renderNotebookPreview();
         });
@@ -1238,15 +1537,23 @@ $$
             const previewEl = document.getElementById('notebookPreview');
             updateTabstopUI(textarea);
 
-            let raw = textarea.value
+            previewEl.innerHTML = compileMarkdownWithKaTeX(textarea.value);
+        }
+
+        /**
+         * Shared Markdown + KaTeX compiler used by both the live Notebook preview
+         * and the Clean Vector PDF Document generator.
+         */
+        function compileMarkdownWithKaTeX(rawInput) {
+            let raw = rawInput
                 .replace(/▢/g, '\\square ')
                 .replace(/◊/g, '');
 
-            // 1. Extract Display Math $$...$$
+            // 1. Extract Display Math $$...$$ first so Marked doesn't mangle underscores or asterisks
             const displayBlocks = [];
             raw = raw.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
                 const id = `@@DISPLAY_MATH_${displayBlocks.length}@@`;
-                displayBlocks.push(math);
+                displayBlocks.push(math.trim());
                 return id;
             });
 
@@ -1254,21 +1561,17 @@ $$
             const inlineBlocks = [];
             raw = raw.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
                 const id = `@@INLINE_MATH_${inlineBlocks.length}@@`;
-                inlineBlocks.push(math);
+                inlineBlocks.push(math.trim());
                 return id;
             });
 
-            // 3. Lightweight Markdown formatting
-            let html = escapeHtml(raw)
-                .replace(/^### (.*$)/gim, '<h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mt-4 mb-1">$1</h3>')
-                .replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 dark:text-white mt-5 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">$1</h2>')
-                .replace(/^# (.*$)/gim, '<h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-3">$1</h1>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-white">$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-                .replace(/\n\n/g, '</p><p class="my-2">')
-                .replace(/\n/g, '<br>');
-
-            html = `<p class="my-2">${html}</p>`;
+            // 3. Parse Markdown using Marked.js (supports images, tables, lists, blockquotes)
+            let html = '';
+            if (typeof marked !== 'undefined') {
+                html = marked.parse(raw, { breaks: true });
+            } else {
+                html = `<p>${escapeHtml(raw).replace(/\n/g, '<br>')}</p>`;
+            }
 
             // 4. Restore and render Display Math
             html = html.replace(/@@DISPLAY_MATH_(\d+)@@/g, (_, idx) => {
@@ -1290,7 +1593,7 @@ $$
                 }
             });
 
-            previewEl.innerHTML = html;
+            return html;
         }
 
         // ---------------------------------------------------------------------
@@ -1300,34 +1603,45 @@ $$
             currentMode = mode;
             const scratchSec = document.getElementById('workspaceScratchpad');
             const noteSec = document.getElementById('workspaceNotebook');
+            const graphSec = document.getElementById('workspaceGrapher');
+
             const btnScratch = document.getElementById('modeScratchpadBtn');
             const btnNote = document.getElementById('modeNotebookBtn');
+            const btnGraph = document.getElementById('modeGrapherBtn');
 
             const activeClasses = ['bg-white', 'dark:bg-slate-900', 'text-brand-600', 'dark:text-brand-400', 'shadow-sm'];
             const inactiveClasses = ['text-slate-600', 'dark:text-slate-400'];
 
+            // Hide all sections first
+            [scratchSec, noteSec, graphSec].forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('flex');
+            });
+
+            // Reset all buttons
+            [btnScratch, btnNote, btnGraph].forEach(btn => {
+                btn.classList.remove(...activeClasses);
+                btn.classList.add(...inactiveClasses);
+            });
+
             if (mode === 'scratchpad') {
                 scratchSec.classList.remove('hidden');
                 scratchSec.classList.add('flex');
-                noteSec.classList.add('hidden');
-                noteSec.classList.remove('flex');
-
                 btnScratch.classList.add(...activeClasses);
                 btnScratch.classList.remove(...inactiveClasses);
-                btnNote.classList.remove(...activeClasses);
-                btnNote.classList.add(...inactiveClasses);
                 renderScratchpadPreview();
-            } else {
+            } else if (mode === 'notebook') {
                 noteSec.classList.remove('hidden');
                 noteSec.classList.add('flex');
-                scratchSec.classList.add('hidden');
-                scratchSec.classList.remove('flex');
-
                 btnNote.classList.add(...activeClasses);
                 btnNote.classList.remove(...inactiveClasses);
-                btnScratch.classList.remove(...activeClasses);
-                btnScratch.classList.add(...inactiveClasses);
                 renderNotebookPreview();
+            } else if (mode === 'grapher') {
+                graphSec.classList.remove('hidden');
+                graphSec.classList.add('flex');
+                btnGraph.classList.add(...activeClasses);
+                btnGraph.classList.remove(...inactiveClasses);
+                setTimeout(() => drawGraph(), 30);
             }
         }
 
@@ -1624,7 +1938,556 @@ ${rawContent}
         }
 
         // ---------------------------------------------------------------------
-        // 11. UI HELPERS (THEME, MOBILE SIDEBAR, TOASTS)
+        // 11. INTERACTIVE 2D FUNCTION GRAPHER ENGINE
+        // ---------------------------------------------------------------------
+        function compileMathExpression(exprStr) {
+            if (!exprStr || !exprStr.trim()) return null;
+            let s = exprStr.trim().toLowerCase();
+
+            // Replace implicit multiplication like 2x -> 2*x, )x -> )*x
+            s = s.replace(/(\d)([a-z\(])/g, '$1*$2');
+            s = s.replace(/(\))(\d|[a-z\(])/g, '$1*$2');
+
+            // Convert ^ to **
+            s = s.replace(/\^/g, '**');
+
+            // Safe token replacement for mathematical functions and constants
+            const tokens = {
+                'asin': 'Math.asin',
+                'acos': 'Math.acos',
+                'atan': 'Math.atan',
+                'sinh': 'Math.sinh',
+                'cosh': 'Math.cosh',
+                'tanh': 'Math.tanh',
+                'sin': 'Math.sin',
+                'cos': 'Math.cos',
+                'tan': 'Math.tan',
+                'sqrt': 'Math.sqrt',
+                'cbrt': 'Math.cbrt',
+                'abs': 'Math.abs',
+                'exp': 'Math.exp',
+                'ln': 'Math.log',
+                'log': 'Math.log10',
+                'pi': 'Math.PI'
+            };
+
+            s = s.replace(/\b(asin|acos|atan|sinh|cosh|tanh|sin|cos|tan|sqrt|cbrt|abs|exp|ln|log|pi|e)\b/g, (match) => {
+                if (match === 'e') return 'Math.E';
+                return tokens[match] || match;
+            });
+
+            try {
+                const fn = new Function('x', `"use strict"; try { return (${s}); } catch(e) { return NaN; }`);
+                fn(1); // test call
+                return fn;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function loadGraphPreset(presetName) {
+            const titleEl = document.getElementById('graphTitleInput');
+            const xLabelEl = document.getElementById('graphXLabel');
+            const yLabelEl = document.getElementById('graphYLabel');
+            const xMinEl = document.getElementById('graphXMin');
+            const xMaxEl = document.getElementById('graphXMax');
+            const yMinEl = document.getElementById('graphYMin');
+            const yMaxEl = document.getElementById('graphYMax');
+
+            if (presetName === 'damped') {
+                titleEl.value = 'Časový průběh tlumeného harmonického kmitání';
+                xLabelEl.value = 't [s]';
+                yLabelEl.value = 'y [m]';
+                xMinEl.value = 0; xMaxEl.value = 15;
+                yMinEl.value = -1.2; yMaxEl.value = 1.2;
+                document.getElementById('fn1Active').checked = true;
+                document.getElementById('fn1Expr').value = 'exp(-0.25*x) * cos(2*x)';
+                document.getElementById('fn1Label').value = 'Tlumená výchylka y(t)';
+                document.getElementById('fn2Active').checked = true;
+                document.getElementById('fn2Expr').value = 'exp(-0.25*x)';
+                document.getElementById('fn2Label').value = 'Horní obálka +A(t)';
+                document.getElementById('fn3Active').checked = true;
+                document.getElementById('fn3Expr').value = '-exp(-0.25*x)';
+                document.getElementById('fn3Label').value = 'Dolní obálka -A(t)';
+            } else if (presetName === 'projectile') {
+                titleEl.value = 'Balistická křivka – Šikmý vrh v tíhovém poli';
+                xLabelEl.value = 'x [m]';
+                yLabelEl.value = 'y [m]';
+                xMinEl.value = 0; xMaxEl.value = 22;
+                yMinEl.value = 0; yMaxEl.value = 8;
+                document.getElementById('fn1Active').checked = true;
+                document.getElementById('fn1Expr').value = 'x * tan(pi/4) - (9.81 / (2 * 14^2 * cos(pi/4)^2)) * x^2';
+                document.getElementById('fn1Label').value = 'Trajektorie pro α = 45°, v0 = 14 m/s';
+                document.getElementById('fn2Active').checked = true;
+                document.getElementById('fn2Expr').value = 'x * tan(pi/3) - (9.81 / (2 * 14^2 * cos(pi/3)^2)) * x^2';
+                document.getElementById('fn2Label').value = 'Trajektorie pro α = 60°, v0 = 14 m/s';
+                document.getElementById('fn3Active').checked = false;
+            } else if (presetName === 'harmonic') {
+                titleEl.value = 'Superpozice dvou blízkých frekvencí (Rázy / Zázněje)';
+                xLabelEl.value = 't [s]';
+                yLabelEl.value = 'y [m]';
+                xMinEl.value = 0; xMaxEl.value = 25;
+                yMinEl.value = -2.2; yMaxEl.value = 2.2;
+                document.getElementById('fn1Active').checked = true;
+                document.getElementById('fn1Expr').value = 'cos(4*x) + cos(4.5*x)';
+                document.getElementById('fn1Label').value = 'Výsledné kmitání y1 + y2';
+                document.getElementById('fn2Active').checked = true;
+                document.getElementById('fn2Expr').value = '2*cos(0.25*x)';
+                document.getElementById('fn2Label').value = 'Modulační obálka rázů';
+                document.getElementById('fn3Active').checked = false;
+            } else if (presetName === 'gauss') {
+                titleEl.value = 'Kvantový vlnový balík a hustota pravděpodobnosti';
+                xLabelEl.value = 'x [nm]';
+                yLabelEl.value = 'Ψ(x)';
+                xMinEl.value = -5; xMaxEl.value = 5;
+                yMinEl.value = -1.1; yMaxEl.value = 1.2;
+                document.getElementById('fn1Active').checked = true;
+                document.getElementById('fn1Expr').value = 'exp(-0.5*x^2) * cos(5*x)';
+                document.getElementById('fn1Label').value = 'Reálná část vlnové funkce Re Ψ(x)';
+                document.getElementById('fn2Active').checked = true;
+                document.getElementById('fn2Expr').value = 'exp(-x^2)';
+                document.getElementById('fn2Label').value = 'Hustota pravděpodobnosti |Ψ(x)|²';
+                document.getElementById('fn3Active').checked = false;
+            }
+            drawGraph();
+            showToast('Fyzikální předvolba vykreslena!');
+        }
+
+        function resetGraphZoom() {
+            document.getElementById('graphXMin').value = -10;
+            document.getElementById('graphXMax').value = 10;
+            document.getElementById('graphYMin').value = -5;
+            document.getElementById('graphYMax').value = 5;
+            drawGraph();
+        }
+
+        function setupGraphCanvasInteractions() {
+            const canvas = document.getElementById('functionGraphCanvas');
+            if (!canvas) return;
+
+            window.addEventListener('resize', () => {
+                if (currentMode === 'grapher') drawGraph();
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const padLeft = 56, padRight = 24;
+                const plotW = rect.width - padLeft - padRight;
+
+                const xMin = parseFloat(document.getElementById('graphXMin').value) || -10;
+                const xMax = parseFloat(document.getElementById('graphXMax').value) || 10;
+
+                if (mouseX >= padLeft && mouseX <= rect.width - padRight) {
+                    graphHoverX = xMin + ((mouseX - padLeft) / plotW) * (xMax - xMin);
+                } else {
+                    graphHoverX = null;
+                }
+                drawGraph();
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                graphHoverX = null;
+                drawGraph();
+            });
+
+            // Mouse wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const factor = e.deltaY > 0 ? 1.15 : 0.85;
+                const xMinEl = document.getElementById('graphXMin');
+                const xMaxEl = document.getElementById('graphXMax');
+                const yMinEl = document.getElementById('graphYMin');
+                const yMaxEl = document.getElementById('graphYMax');
+
+                let xMin = parseFloat(xMinEl.value), xMax = parseFloat(xMaxEl.value);
+                let yMin = parseFloat(yMinEl.value), yMax = parseFloat(yMaxEl.value);
+
+                const xCenter = (xMin + xMax) / 2;
+                const yCenter = (yMin + yMax) / 2;
+                const xSpan = (xMax - xMin) * factor;
+                const ySpan = (yMax - yMin) * factor;
+
+                xMinEl.value = (xCenter - xSpan / 2).toFixed(2);
+                xMaxEl.value = (xCenter + xSpan / 2).toFixed(2);
+                yMinEl.value = (yCenter - ySpan / 2).toFixed(2);
+                yMaxEl.value = (yCenter + ySpan / 2).toFixed(2);
+                drawGraph();
+            }, { passive: false });
+        }
+
+        function drawGraph(forceLightBackground = false) {
+            const canvas = document.getElementById('functionGraphCanvas');
+            const wrapper = document.getElementById('graphCanvasWrapper');
+            if (!canvas || !wrapper) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const width = wrapper.clientWidth || 720;
+            const height = wrapper.clientHeight || 420;
+
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            const isDark = !forceLightBackground && document.documentElement.classList.contains('dark');
+
+            // Colors
+            const bgColor = isDark ? '#090d16' : '#ffffff';
+            const gridColor = isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.28)';
+            const axisColor = isDark ? '#94a3b8' : '#334155';
+            const textColor = isDark ? '#cbd5e1' : '#1e293b';
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            const padLeft = 56, padRight = 24, padTop = 44, padBottom = 42;
+            const plotW = Math.max(100, width - padLeft - padRight);
+            const plotH = Math.max(100, height - padTop - padBottom);
+
+            let xMin = parseFloat(document.getElementById('graphXMin').value);
+            let xMax = parseFloat(document.getElementById('graphXMax').value);
+            let yMin = parseFloat(document.getElementById('graphYMin').value);
+            let yMax = parseFloat(document.getElementById('graphYMax').value);
+
+            if (isNaN(xMin) || isNaN(xMax) || xMin >= xMax) { xMin = -10; xMax = 10; }
+            if (isNaN(yMin) || isNaN(yMax) || yMin >= yMax) { yMin = -5; yMax = 5; }
+
+            const toPxX = (x) => padLeft + ((x - xMin) / (xMax - xMin)) * plotW;
+            const toPxY = (y) => padTop + plotH - ((y - yMin) / (yMax - yMin)) * plotH;
+
+            // 1. Grid & Ticks
+            const showGrid = document.getElementById('graphShowGrid').checked;
+            ctx.font = '11px "JetBrains Mono", monospace';
+            ctx.lineWidth = 1;
+
+            const xSteps = 8;
+            for (let i = 0; i <= xSteps; i++) {
+                const val = xMin + (i / xSteps) * (xMax - xMin);
+                const px = toPxX(val);
+                if (showGrid) {
+                    ctx.strokeStyle = gridColor;
+                    ctx.beginPath();
+                    ctx.moveTo(px, padTop);
+                    ctx.lineTo(px, padTop + plotH);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(Number(val.toFixed(2)), px, padTop + plotH + 16);
+            }
+
+            const ySteps = 6;
+            for (let i = 0; i <= ySteps; i++) {
+                const val = yMin + (i / ySteps) * (yMax - yMin);
+                const py = toPxY(val);
+                if (showGrid) {
+                    ctx.strokeStyle = gridColor;
+                    ctx.beginPath();
+                    ctx.moveTo(padLeft, py);
+                    ctx.lineTo(padLeft + plotW, py);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'right';
+                ctx.fillText(Number(val.toFixed(2)), padLeft - 8, py + 4);
+            }
+
+            // 2. Main Axes x=0 and y=0
+            ctx.strokeStyle = axisColor;
+            ctx.lineWidth = 1.5;
+            if (xMin <= 0 && xMax >= 0) {
+                const zeroX = toPxX(0);
+                ctx.beginPath();
+                ctx.moveTo(zeroX, padTop);
+                ctx.lineTo(zeroX, padTop + plotH);
+                ctx.stroke();
+            }
+            if (yMin <= 0 && yMax >= 0) {
+                const zeroY = toPxY(0);
+                ctx.beginPath();
+                ctx.moveTo(padLeft, zeroY);
+                ctx.lineTo(padLeft + plotW, zeroY);
+                ctx.stroke();
+            }
+
+            // Plot Border
+            ctx.strokeStyle = gridColor;
+            ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+            // 3. Title & Axis Labels
+            const title = document.getElementById('graphTitleInput').value.trim();
+            const xLabel = document.getElementById('graphXLabel').value.trim();
+            const yLabel = document.getElementById('graphYLabel').value.trim();
+
+            if (title) {
+                ctx.fillStyle = textColor;
+                ctx.font = 'bold 13px Inter, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(title, padLeft, 24);
+            }
+            if (xLabel) {
+                ctx.fillStyle = textColor;
+                ctx.font = '600 11px Inter, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(xLabel, padLeft + plotW, padTop + plotH + 34);
+            }
+            if (yLabel) {
+                ctx.save();
+                ctx.fillStyle = textColor;
+                ctx.font = '600 11px Inter, sans-serif';
+                ctx.translate(16, padTop + 10);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'right';
+                ctx.fillText(yLabel, 0, 0);
+                ctx.restore();
+            }
+
+            // 4. Plot Functions
+            const configs = [
+                {
+                    active: document.getElementById('fn1Active').checked,
+                    expr: document.getElementById('fn1Expr').value,
+                    label: document.getElementById('fn1Label').value || 'f(x)',
+                    color: '#6366f1',
+                    name: 'f'
+                },
+                {
+                    active: document.getElementById('fn2Active').checked,
+                    expr: document.getElementById('fn2Expr').value,
+                    label: document.getElementById('fn2Label').value || 'g(x)',
+                    color: '#10b981',
+                    name: 'g'
+                },
+                {
+                    active: document.getElementById('fn3Active').checked,
+                    expr: document.getElementById('fn3Expr').value,
+                    label: document.getElementById('fn3Label').value || 'h(x)',
+                    color: '#f43f5e',
+                    name: 'h'
+                }
+            ];
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(padLeft, padTop, plotW, plotH);
+            ctx.clip();
+
+            const samples = Math.min(1200, plotW * 2);
+            const rootsFound = [];
+
+            configs.forEach((cfg, idx) => {
+                if (!cfg.active) return;
+                const fn = compileMathExpression(cfg.expr);
+                if (!fn) return;
+                cfg.fn = fn;
+
+                ctx.strokeStyle = cfg.color;
+                ctx.lineWidth = idx === 0 ? 2.5 : 2;
+                ctx.beginPath();
+
+                let drawing = false;
+                let prevX = null, prevY = null;
+
+                for (let i = 0; i <= samples; i++) {
+                    const x = xMin + (i / samples) * (xMax - xMin);
+                    const y = fn(x);
+
+                    if (typeof y === 'number' && isFinite(y) && Math.abs(y) < 1e6) {
+                        const px = toPxX(x);
+                        const py = toPxY(y);
+
+                        if (!drawing) {
+                            ctx.moveTo(px, py);
+                            drawing = true;
+                        } else {
+                            ctx.lineTo(px, py);
+                        }
+
+                        // Root detection for primary function f(x)
+                        if (idx === 0 && prevY !== null && ((prevY <= 0 && y >= 0) || (prevY >= 0 && y <= 0)) && prevY !== y) {
+                            const rootX = prevX - prevY * (x - prevX) / (y - prevY);
+                            if (rootsFound.length < 6) rootsFound.push(rootX);
+                        }
+
+                        prevX = x;
+                        prevY = y;
+                    } else {
+                        drawing = false;
+                        prevY = null;
+                    }
+                }
+                ctx.stroke();
+            });
+
+            // 5. Highlight roots f(x) = 0
+            if (document.getElementById('graphShowRoots').checked && rootsFound.length > 0 && yMin <= 0 && yMax >= 0) {
+                const zeroY = toPxY(0);
+                rootsFound.forEach(rx => {
+                    const px = toPxX(rx);
+                    ctx.fillStyle = '#6366f1';
+                    ctx.beginPath();
+                    ctx.arc(px, zeroY, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = bgColor;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+            }
+
+            // 6. Interactive Hover Crosshair & Tangent Readout
+            const readoutEl = document.getElementById('graphReadoutBar');
+            if (graphHoverX !== null && !forceLightBackground) {
+                const hx = toPxX(graphHoverX);
+                ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.25)';
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(hx, padTop);
+                ctx.lineTo(hx, padTop + plotH);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                let htmlBadges = `<span class="font-bold text-slate-700 dark:text-slate-200">x = ${graphHoverX.toFixed(3)}</span>`;
+
+                configs.forEach(cfg => {
+                    if (cfg.active && cfg.fn) {
+                        const yVal = cfg.fn(graphHoverX);
+                        if (isFinite(yVal)) {
+                            const py = toPxY(yVal);
+                            ctx.fillStyle = cfg.color;
+                            ctx.beginPath();
+                            ctx.arc(hx, py, 5, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            // Numerical derivative f'(x)
+                            const h = 1e-5;
+                            const deriv = (cfg.fn(graphHoverX + h) - cfg.fn(graphHoverX - h)) / (2 * h);
+                            htmlBadges += `<span class="px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800" style="color:${cfg.color}">${cfg.name}(x) = ${yVal.toFixed(3)} <span class="opacity-75">(${cfg.name}' = ${deriv.toFixed(2)})</span></span>`;
+                        }
+                    }
+                });
+                readoutEl.innerHTML = htmlBadges;
+            }
+
+            ctx.restore();
+
+            // 7. Legend Box in top-right
+            let legendX = padLeft + plotW - 10;
+            let legendY = 18;
+            ctx.font = '11px Inter, sans-serif';
+            ctx.textAlign = 'right';
+            configs.forEach(cfg => {
+                if (!cfg.active || !cfg.expr.trim()) return;
+                ctx.fillStyle = cfg.color;
+                ctx.fillText(`● ${cfg.label} [${cfg.expr}]`, legendX, legendY);
+                legendY += 15;
+            });
+
+            // Update Root Summary Footer
+            const rootFooter = document.getElementById('graphRootsSummary');
+            if (rootsFound.length > 0) {
+                rootFooter.innerHTML = `<i class="ph ph-check-circle text-indigo-500 mr-1"></i>Nalezené nulové body <strong>f(x) = 0</strong> v intervalu: <code class="font-mono text-indigo-600 dark:text-indigo-400">x ≈ ${rootsFound.map(r => r.toFixed(3)).join(', ')}</code>`;
+            } else {
+                rootFooter.innerHTML = `Žádné průsečíky f(x) = 0 ve zvoleném okně os.`;
+            }
+        }
+
+        function getHighResLightGraphDataURL() {
+            const prevHover = graphHoverX;
+            graphHoverX = null;
+            drawGraph(true); // Render with crisp white academic background for notes & PDF
+            const canvas = document.getElementById('functionGraphCanvas');
+            const dataUrl = canvas.toDataURL('image/png');
+            graphHoverX = prevHover;
+            drawGraph(false);
+            return dataUrl;
+        }
+
+        function insertGraphIntoNotebook() {
+            const dataUrl = getHighResLightGraphDataURL();
+            const title = document.getElementById('graphTitleInput').value.trim() || 'Graf funkce';
+            const fn1 = document.getElementById('fn1Expr').value.trim();
+
+            const markdownBlock = `\n\n### Graf: ${title}\n![${title}](${dataUrl})\n*Funkce: \`f(x) = ${fn1}\`*\n`;
+            const notebookEl = document.getElementById('notebookEditor');
+            notebookEl.value += markdownBlock;
+            saveNotebookState();
+            renderNotebookPreview();
+            switchWorkspaceMode('notebook');
+            showToast('Graf byl vložen do Zápisníku a je připraven i pro PDF export!');
+        }
+
+        function downloadGraphPNG() {
+            const dataUrl = getHighResLightGraphDataURL();
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'physmath_graf.png';
+            a.click();
+            showToast('Graf byl stažen jako PNG obrázek!');
+        }
+
+        // ---------------------------------------------------------------------
+        // 12. DIRECT CLEAN VECTOR PDF EXPORT
+        // ---------------------------------------------------------------------
+        function openPdfExportModal() {
+            const currentNoteTitle = document.getElementById('noteTitleInput').value.trim() || 'Fyzika & Matematika – Protokol';
+            document.getElementById('pdfDocTitle').value = currentNoteTitle;
+            document.getElementById('pdfExportModal').classList.remove('hidden');
+            document.getElementById('pdfExportModal').classList.add('flex');
+        }
+
+        function closePdfExportModal() {
+            document.getElementById('pdfExportModal').classList.add('hidden');
+            document.getElementById('pdfExportModal').classList.remove('flex');
+        }
+
+        function triggerCleanPdfPrint() {
+            const docTitle = document.getElementById('pdfDocTitle').value.trim() || 'Dokument';
+            const docAuthor = document.getElementById('pdfDocAuthor').value.trim();
+            const fontStyle = document.getElementById('pdfFontStyle').value;
+            const includeHeader = document.getElementById('pdfIncludeHeader').checked;
+            const dateStr = new Date().toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const rawMarkdown = document.getElementById('notebookEditor').value;
+            const compiledBody = compileMarkdownWithKaTeX(rawMarkdown);
+
+            const fontClass = fontStyle === 'serif' ? 'font-serif' : 'font-sans';
+
+            let headerHtml = '';
+            if (includeHeader) {
+                headerHtml = `
+                    <div class="border-b-2 border-slate-800 pb-4 mb-6 flex justify-between items-end">
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-slate-500 font-sans font-semibold mb-1">PhysMath Studio • Akademický výstup</div>
+                            <h1 class="text-2xl font-bold text-slate-900 m-0">${escapeHtml(docTitle)}</h1>
+                            ${docAuthor ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(docAuthor)}</div>` : ''}
+                        </div>
+                        <div class="text-xs text-slate-500 font-sans text-right">
+                            <div>Datum: ${dateStr}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const printContainer = document.getElementById('printDocumentContainer');
+            printContainer.className = `hidden notebook-rendered ${fontClass} text-slate-900 leading-relaxed`;
+            printContainer.innerHTML = `
+                ${headerHtml}
+                <div class="space-y-3 text-base">
+                    ${compiledBody}
+                </div>
+            `;
+
+            closePdfExportModal();
+            setTimeout(() => {
+                window.print();
+            }, 150);
+        }
+
+        // ---------------------------------------------------------------------
+        // 13. UI HELPERS (THEME, MOBILE SIDEBAR, TOASTS)
         // ---------------------------------------------------------------------
         function toggleTheme() {
             const html = document.documentElement;
@@ -1635,6 +2498,8 @@ ${rawContent}
             } else {
                 icon.className = 'ph ph-moon text-lg';
             }
+            if (currentMode === 'grapher') drawGraph();
+        }
         }
 
         function toggleMobileSidebar() {
